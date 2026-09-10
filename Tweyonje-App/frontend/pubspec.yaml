@@ -61,6 +61,7 @@ dependencies:
   url_launcher: ^6.3.0
   flutter_map_cancellable_tile_provider: ^3.0.2
   path: ^1.8.3
+  supabase_flutter: ^2.8.4
 
 dependency_overrides:
   path_provider_foundation: 2.4.0

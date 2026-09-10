@@ -80,12 +80,12 @@ class WebSocketSubscriber(AsyncJsonWebsocketConsumer):
                 await self.channel_layer.group_discard(group, self.channel_name)
             await self._send_event("unsubscribed", {"scope": scope_type, "id": group_id})
 
-    # ------------------------------------------------------------------
+    
     # Channel layer handler (dispatched via {"type": "push.event", ...})
     async def push_event(self, message):
         await self._send_event(message["event_type"], message.get("data", {}))
 
-    # ------------------------------------------------------------------
+    
     async def _send_event(self, event_type: str, data: dict) -> None:
         from django.utils.timezone import now
 
@@ -102,7 +102,7 @@ class WebSocketSubscriber(AsyncJsonWebsocketConsumer):
             return False
 
 
-# ---------------------------------------------------------------------------
+
 # Per-scope authorization helpers (sync; run inside the consumer thread pool)
 
 

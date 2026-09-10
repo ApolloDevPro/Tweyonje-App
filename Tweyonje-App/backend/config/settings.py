@@ -175,14 +175,56 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
 ]
 
+# Supabase Configuration
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")
+
+# Paths that don't require Supabase JWT authentication
+SUPABASE_AUTH_EXEMPT_PATHS = [
+    "/api/auth/login/",
+    "/api/auth/register/",
+    "/api/auth/refresh/",
+    "/api/auth/password-reset/",
+    "/api/auth/otp/",
+    "/admin/",
+    "/api/schema/",
+    "/api/docs/",
+    "/health/",
+    "/api/waste-requests/categories/",  # Public endpoint
+]
+
+# Add Supabase middleware
+MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.security.middleware.AuditLogMiddleware",
+    "core.middleware.SupabaseAuthMiddleware",  # Supabase JWT auth
+]
+
 # Database
-# DB_ENGINE: "" / "sqlite" -> SQLite | "postgres" -> PostgreSQL |
-# "postgis" -> PostGIS (requires the django.contrib.gis stack incl. GDAL).
-# The plain "postgres" engine also connects to PostGIS-enabled servers;
-# it only lacks spatial field/lookup support, which this project does not
-# currently use (locations are stored as decimal lat/lng pairs).
-DB_ENGINE = os.getenv("DB_ENGINE", "")
-if DB_ENGINE in ("", "sqlite") or (DB_ENGINE not in ("postgres", "postgis") and not os.getenv("DB_HOST")):
+# DATABASE_URL takes precedence (set by Railway, Heroku, etc.)
+# Otherwise, uses DB_ENGINE to determine database type
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if DATABASE_URL:
+    # Use DATABASE_URL (e.g., postgres://user:pass@host:port/dbname)
+    import dj_database_url
+    DATABASES = {
+        "default": dj_database_url.config(
+            default="sqlite:///db.sqlite3",
+            conn_max_age=env_int("DB_CONN_MAX_AGE", 60),
+        )
+    }
+elif DB_ENGINE in ("", "sqlite") or (DB_ENGINE not in ("postgres", "postgis") and not os.getenv("DB_HOST")):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -199,6 +241,9 @@ elif DB_ENGINE == "postgis":
             "HOST": os.getenv("DB_HOST", "localhost"),
             "PORT": os.getenv("DB_PORT", "5432"),
             "CONN_MAX_AGE": env_int("DB_CONN_MAX_AGE", 60),
+            "OPTIONS": {
+                "sslmode": os.getenv("DB_SSLMODE", "require") if os.getenv("DB_HOST", "").endswith("supabase.co") else "prefer",
+            },
         }
     }
 else:
@@ -211,6 +256,9 @@ else:
             "HOST": os.getenv("DB_HOST", "localhost"),
             "PORT": os.getenv("DB_PORT", "5432"),
             "CONN_MAX_AGE": env_int("DB_CONN_MAX_AGE", 60),
+            "OPTIONS": {
+                "sslmode": os.getenv("DB_SSLMODE", "require") if os.getenv("DB_HOST", "").endswith("supabase.co") else "prefer",
+            },
         }
     }
 

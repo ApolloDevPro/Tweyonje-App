@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import '../core/services/api_client.dart';
+import '../core/services/supabase_auth_service.dart';
 import '../core/storage/local_storage.dart';
 import '../models/models.dart';
 
@@ -39,10 +41,66 @@ class AuthState {
 class AuthNotifier extends StateNotifier<AuthState> {
   final ApiClient _api;
   final LocalStorage _storage;
+  final SupabaseAuthService _supabaseAuth;
 
-  AuthNotifier(this._api, this._storage) : super(AuthState.initial()) {
+  AuthNotifier(this._api, this._storage, this._supabaseAuth) : super(AuthState.initial()) {
     _api.onSessionExpired = _handleSessionExpired;
+    _setupSupabaseAuthListener();
     hydrate();
+  }
+
+  /// Listen to Supabase auth state changes
+  void _setupSupabaseAuthListener() {
+    _supabaseAuth.authStateChanges.listen((event) {
+      switch (event.event) {
+        case supabase.AuthChangeEvent.signedIn:
+          // User signed in via Supabase
+          _handleSupabaseSignIn(event.session);
+          break;
+        case supabase.AuthChangeEvent.signedOut:
+          // User signed out via Supabase
+          state = state.copyWith(
+            status: AuthStatus.unauthenticated,
+            user: null,
+          );
+          break;
+        case supabase.AuthChangeEvent.tokenRefreshed:
+          // Token refreshed
+          _handleTokenRefresh(event.session);
+          break;
+        case supabase.AuthChangeEvent.userUpdated:
+          // User data updated
+          _handleUserUpdate(event.session);
+          break;
+        default:
+          break;
+      }
+    });
+  }
+
+  Future<void> _handleSupabaseSignIn(supabase.Session? session) async {
+    if (session != null) {
+      final user = await _supabaseAuth.getCurrentUser();
+      if (user != null) {
+        state = state.copyWith(
+          status: AuthStatus.authenticated,
+          user: user,
+        );
+      }
+    }
+  }
+
+  Future<void> _handleTokenRefresh(supabase.Session? session) async {
+    if (session != null) {
+      await _storage.saveAccessToken(session.accessToken);
+    }
+  }
+
+  Future<void> _handleUserUpdate(supabase.Session? session) async {
+    final user = await _supabaseAuth.getCurrentUser();
+    if (user != null) {
+      state = state.copyWith(user: user);
+    }
   }
 
   Future<void> _handleSessionExpired() async {
@@ -54,9 +112,34 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
   }
 
+  /// Hydrate auth state from local storage / Supabase
   Future<void> hydrate() async {
     state = state.copyWith(status: AuthStatus.loading);
     try {
+      // First check Supabase session
+      final supabaseUser = _supabaseAuth.currentUser;
+      if (supabaseUser != null) {
+        final user = await _supabaseAuth.getCurrentUser();
+        if (user != null) {
+          state = state.copyWith(
+            status: AuthStatus.authenticated,
+            user: user,
+          );
+
+          // Optionally refresh profile from Django backend in background
+          try {
+            final res = await _api.getCurrentUser();
+            if (res.statusCode == 200) {
+              final freshUser = User.fromJson(res.data['user'] ?? res.data);
+              await _storage.saveUser(freshUser);
+              state = state.copyWith(user: freshUser);
+            }
+          } catch (_) {}
+          return;
+        }
+      }
+
+      // Fallback to local storage
       final token = await _storage.getAccessToken();
       final cachedUser = await _storage.getUser();
 
@@ -86,33 +169,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Login via Supabase Auth
   Future<bool> login(String emailOrPhone, String password) async {
     state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
     try {
-      final res = await _api.login(emailOrPhone, password);
-      if (res.statusCode == 200) {
-        final session = AuthSession.fromJson(res.data);
-        await _storage.saveTokens(
-          access: session.access,
-          refresh: session.refresh,
-        );
-        await _storage.saveUser(session.user);
+      // Use Supabase for authentication
+      final session = await _supabaseAuth.login(
+        email: emailOrPhone,
+        password: password,
+      );
 
-        state = state.copyWith(
-          status: AuthStatus.authenticated,
-          user: session.user,
-        );
-        return true;
-      } else {
-        state = state.copyWith(
-          status: AuthStatus.unauthenticated,
-          errorMessage: res.data['detail'] ?? 'Invalid credentials',
-        );
-        return false;
-      }
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        user: session.user,
+      );
+      return true;
     } catch (e) {
       String msg = 'Invalid credentials. Please verify your email and password.';
-      if (e is DioException) {
+      if (e is supabase.AuthException) {
+        msg = e.message;
+      } else if (e is DioException) {
         final data = e.response?.data;
         if (data is Map) {
           msg = data['detail'] ??
@@ -129,6 +205,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Register via Supabase Auth
   Future<bool> register({
     required String email,
     required String password,
@@ -138,36 +215,46 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }) async {
     state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
     try {
-      final res = await _api.register(
+      // Use Supabase for registration
+      final session = await _supabaseAuth.register(
         email: email,
         password: password,
         fullName: fullName,
-        role: role,
-        phone: phone,
+        phone: phone ?? '',
+        role: UserRole.values.firstWhere(
+          (r) => r.value == role,
+          orElse: () => UserRole.resident,
+        ),
       );
 
-      if (res.statusCode == 201 || res.statusCode == 200) {
-        if (res.data['access'] != null) {
-          final session = AuthSession.fromJson(res.data);
-          await _storage.saveTokens(
-            access: session.access,
-            refresh: session.refresh,
-          );
-          await _storage.saveUser(session.user);
-
-          state = state.copyWith(
-            status: AuthStatus.authenticated,
-            user: session.user,
-          );
-        } else {
-          state = state.copyWith(status: AuthStatus.unauthenticated);
-        }
-        return true;
+      // Also register in Django backend (for business logic)
+      try {
+        await _api.register(
+          email: email,
+          password: password,
+          fullName: fullName,
+          role: role,
+          phone: phone,
+        );
+      } catch (_) {
+        // Django registration is optional - Supabase is primary
       }
-      return false;
+
+      if (session.access.isNotEmpty) {
+        state = state.copyWith(
+          status: AuthStatus.authenticated,
+          user: session.user,
+        );
+      } else {
+        // Email confirmation required
+        state = state.copyWith(status: AuthStatus.unauthenticated);
+      }
+      return true;
     } catch (e) {
       String msg = 'Registration failed. Please try again.';
-      if (e is DioException) {
+      if (e is supabase.AuthException) {
+        msg = e.message;
+      } else if (e is DioException) {
         final data = e.response?.data;
         if (data is Map) {
           msg = data['detail'] ??
@@ -185,12 +272,34 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Logout from Supabase
   Future<void> logout() async {
+    await _supabaseAuth.logout();
     await _storage.clearSession();
     state = state.copyWith(
       status: AuthStatus.unauthenticated,
       user: null,
     );
+  }
+
+  /// Send OTP for phone verification
+  Future<bool> sendOTP(String phone) async {
+    return await _supabaseAuth.sendOTP(phone: phone);
+  }
+
+  /// Verify OTP
+  Future<bool> verifyOTP(String phone, String token) async {
+    return await _supabaseAuth.verifyOTP(phone: phone, token: token);
+  }
+
+  /// Update password
+  Future<bool> updatePassword(String newPassword) async {
+    return await _supabaseAuth.updatePassword(newPassword: newPassword);
+  }
+
+  /// Request password reset
+  Future<bool> requestPasswordReset(String email) async {
+    return await _supabaseAuth.requestPasswordReset(email: email);
   }
 
   void clearError() {
@@ -201,5 +310,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   final api = ref.watch(apiClientProvider);
   final storage = LocalStorage();
-  return AuthNotifier(api, storage);
+  final supabaseAuth = ref.watch(supabaseAuthServiceProvider);
+  return AuthNotifier(api, storage, supabaseAuth);
 });

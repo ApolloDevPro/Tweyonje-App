@@ -16,6 +16,7 @@ whitenoise>=6.5.0
 
 # Database
 psycopg2-binary>=2.9.0
+dj-database-url>=2.1.0
 
 # PostGIS (optional, for geospatial features)
 django-leaflet>=0.29.0

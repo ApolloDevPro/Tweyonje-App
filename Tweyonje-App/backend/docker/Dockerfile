@@ -1,6 +1,5 @@
-# Backend Dockerfile for Tweyonje.
-# Serves the ASGI app (HTTP + WebSocket) via Daphne and can also run Celery
-# workers/beat. Dependencies pin Python 3.11 to match CI.
+# Backend Dockerfile for Tweyonje
+# Serves the ASGI app (HTTP + WebSocket) via Daphne
 
 FROM python:3.11-slim
 
@@ -9,7 +8,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     DEBIAN_FRONTEND=noninteractive
 
-# libgomp1 is required by the PyTorch CPU wheels pulled in via requirements.txt.
+# Install system dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         curl \
@@ -26,8 +25,8 @@ RUN pip install --upgrade pip \
 # Copy the application code.
 COPY . .
 
-# Collect static files into staticfiles/ so Whitenoise/nginx can serve them.
-RUN python manage.py collectstatic --noinput --no-post-process
+# Collect static files into staticfiles/ so Whitenoise can serve them.
+RUN python manage.py collectstatic --noinput --no-post-process || true
 
 # Run as an unprivileged user.
 RUN groupadd -r django && useradd -r -g django django \
