@@ -1,0 +1,65 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Collection Complete - {{ request_reference }}{% endblock %}
+
+{% block content %}
+<h1>Your Waste Has Been Collected! ✅</h1>
+
+<p>Hello {{ user_name }},</p>
+
+<p>Great news! Your waste collection request has been successfully completed.</p>
+
+<div class="info-box">
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 8px 0;"><strong>Request ID:</strong></td>
+            <td style="padding: 8px 0; text-align: right;">{{ request_reference }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0;"><strong>Collected Weight:</strong></td>
+            <td style="padding: 8px 0; text-align: right;"><strong>{{ weight_kg }} kg</strong></td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0;"><strong>Category:</strong></td>
+            <td style="padding: 8px 0; text-align: right;">{{ category }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0;"><strong>Collector:</strong></td>
+            <td style="padding: 8px 0; text-align: right;">{{ collector_name }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0;"><strong>Completed:</strong></td>
+            <td style="padding: 8px 0; text-align: right;">{{ completion_time }}</td>
+        </tr>
+    </table>
+</div>
+
+{% if eco_points_earned %}
+<div class="info-box" style="background-color: #E8F5E9; border-left-color: #4CAF50;">
+    <strong>🎁 You Earned {{ eco_points_earned }} Eco-Points!</strong><br>
+    <small>Current Balance: {{ total_eco_points }} points</small>
+</div>
+{% endif %}
+
+<h2>Rate Your Experience</h2>
+<p>Help us improve by rating your collection experience:</p>
+
+<p style="margin: 20px 0;">
+    <a href="{{ app_url }}/ratings/{{ assignment_id }}?rating=5" class="button">⭐⭐⭐⭐⭐ Excellent</a>
+</p>
+
+<p style="text-align: center; font-size: 14px;">
+    <a href="{{ app_url }}/ratings/{{ assignment_id }}" style="color: #4CAF50;">Rate Now</a>
+</p>
+
+{% if recyclable %}
+<div class="info-box" style="background-color: #E3F2FD; border-left-color: #2196F3;">
+    <strong>♻️ Did You Know?</strong><br>
+    {{ recyclable_message }}
+    <br><br>
+    <a href="{{ app_url }}/recycling" style="color: #2196F3;">Explore Recycling Options →</a>
+</div>
+{% endif %}
+
+<p style="margin-top: 30px;">Thank you for using Tweyonje and helping keep Uganda clean! 🌍</p>
+{% endblock %}

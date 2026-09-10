@@ -1,0 +1,17 @@
+{% extends "emails/base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<p>Hello {{ user_name }},</p>
+
+<div style="line-height: 1.8;">
+    {{ message|linebreaks }}
+</div>
+
+<p style="margin-top: 30px;">
+    <a href="{{ app_url }}" class="button">Open Tweyonje App</a>
+</p>
+{% endblock %}

@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+*.sqlite3
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+*.log
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# Node / React Native
+node_modules/
+npm-debug.*
+yarn-error.log
+.expo/
+dist/
+build/
+*.tsbuildinfo
+ios/Pods/
+android/.gradle/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Backups
+database/backups/*
+!database/backups/.gitkeep

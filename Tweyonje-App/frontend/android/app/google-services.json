@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "427328126917",
+    "project_id": "tweyonje-8f1ea",
+    "storage_bucket": "tweyonje-8f1ea.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:427328126917:android:7736d4dcf78841fc0c15ac",
+        "android_client_info": {
+          "package_name": "ug.tweyonje.tweyonje"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCr-6TIiAd4yhs5j84M8qcm29l5Wgq6a80"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

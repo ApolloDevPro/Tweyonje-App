@@ -1,0 +1,61 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Payment Receipt - {{ reference_id }}{% endblock %}
+
+{% block content %}
+<h1>Payment Confirmed ✅</h1>
+
+<p>Hello {{ user_name }},</p>
+
+<p>Your payment has been successfully processed. Here are the details:</p>
+
+<div class="info-box">
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 8px 0;"><strong>Receipt Number:</strong></td>
+            <td style="padding: 8px 0; text-align: right;">{{ reference_id }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0;"><strong>Amount:</strong></td>
+            <td style="padding: 8px 0; text-align: right; font-size: 20px; font-weight: bold; color: #4CAF50;">
+                UGX {{ amount|floatformat:0 }}
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0;"><strong>Payment Method:</strong></td>
+            <td style="padding: 8px 0; text-align: right;">{{ payment_method }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0;"><strong>Transaction ID:</strong></td>
+            <td style="padding: 8px 0; text-align: right;">{{ transaction_id }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0;"><strong>Date:</strong></td>
+            <td style="padding: 8px 0; text-align: right;">{{ payment_date }}</td>
+        </tr>
+        {% if waste_request_reference %}
+        <tr>
+            <td style="padding: 8px 0;"><strong>For Request:</strong></td>
+            <td style="padding: 8px 0; text-align: right;">{{ waste_request_reference }}</td>
+        </tr>
+        {% endif %}
+    </table>
+</div>
+
+{% if eco_points_earned %}
+<div class="info-box" style="background-color: #FFF9C4; border-left-color: #FFC107;">
+    <strong>🎁 Eco-Points Earned:</strong> {{ eco_points_earned }} points<br>
+    <small>Keep recycling to earn more rewards!</small>
+</div>
+{% endif %}
+
+<p>This receipt serves as confirmation of your payment. Keep it for your records.</p>
+
+<p style="margin-top: 30px;">
+    <a href="{{ app_url }}/payment-history" class="button">View Payment History</a>
+</p>
+
+<p style="font-size: 12px; color: #666; margin-top: 30px;">
+    Need a refund? Contact support at <a href="mailto:support@tweyonje.ug">support@tweyonje.ug</a> with your receipt number.
+</p>
+{% endblock %}

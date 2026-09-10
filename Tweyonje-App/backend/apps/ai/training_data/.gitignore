@@ -1,0 +1,10 @@
+# Ignore actual training images (can be large)
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.bmp
+
+# Keep directory structure
+!.gitkeep
+!README.md

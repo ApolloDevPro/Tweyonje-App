@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+*.sqlite3
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+*.log
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# Flutter
+Tweyonje-App/frontend/.dart_tool/
+Tweyonje-App/frontend/.packages
+Tweyonje-App/frontend/.pub-cache/
+Tweyonje-App/frontend/.pub/
+Tweyonje-App/frontend/build/
+Tweyonje-App/frontend/.flutter-plugins
+Tweyonje-App/frontend/.flutter-plugins-dependencies
+Tweyonje-App/frontend/pubspec.lock
+Tweyonje-App/frontend/android/.gradle/
+Tweyonje-App/frontend/android/app/build/
+Tweyonje-App/frontend/android/local.properties
+Tweyonje-App/frontend/ios/Pods/
+Tweyonje-App/frontend/ios/.symlinks/
+Tweyonje-App/frontend/windows/flutter/ephemeral/
+
+# Node / React Native
+node_modules/
+npm-debug.*
+yarn-error.log
+.expo/
+dist/
+build/
+*.tsbuildinfo
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Backups
+database/backups/*
+!database/backups/.gitkeep

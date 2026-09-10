@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>BUNDLE_ID</key>
+	<string>ug.tweyonje.tweyonje</string>
+	<key>CLIENT_ID</key>
+	<string>YOUR_IOS_CLIENT_ID</string>
+	<key>PROJECT_ID</key>
+	<string>YOUR_FIREBASE_PROJECT_ID</string>
+	<key>STORAGE_BUCKET</key>
+	<string>YOUR_FIREBASE_PROJECT_ID.appspot.com</string>
+	<key>API_KEY</key>
+	<string>YOUR_IOS_API_KEY</string>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:YOUR_PROJECT_NUMBER:ios:YOUR_IOS_APP_HASH</string>
+</dict>
+</plist>

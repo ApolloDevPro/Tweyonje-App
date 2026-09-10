@@ -1,0 +1,10 @@
+.dart_tool/
+.git/
+.gitignore
+.idea/
+.vscode/
+build/
+windows/
+test/
+*.iml
+.metadata

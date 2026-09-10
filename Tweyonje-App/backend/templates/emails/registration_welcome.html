@@ -1,0 +1,60 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Welcome to Tweyonje{% endblock %}
+
+{% block content %}
+<h1>Welcome to Tweyonje, {{ user_name }}! 🎉</h1>
+
+<p>Thank you for joining Uganda's leading smart waste management platform. We're excited to have you on board!</p>
+
+<p>Your account has been successfully created:</p>
+
+<div class="info-box">
+    <strong>Email:</strong> {{ user_email }}<br>
+    <strong>Role:</strong> {{ user_role }}<br>
+    <strong>Account ID:</strong> {{ user_id }}
+</div>
+
+<h2>What's Next?</h2>
+
+{% if user_role == "RESIDENT" or user_role == "BUSINESS" %}
+<p>As a {{ user_role|lower }}, you can:</p>
+<ul>
+    <li>📍 Schedule waste pickup requests</li>
+    <li>🗺️ Track your collections in real-time</li>
+    <li>🎁 Earn eco-points for recycling</li>
+    <li>♻️ Trade recyclable materials in our marketplace</li>
+</ul>
+
+<a href="{{ app_url }}/create-request" class="button">Schedule Your First Pickup</a>
+
+{% elif user_role == "COLLECTOR" %}
+<p>As a collector, you can:</p>
+<ul>
+    <li>📋 View and accept collection assignments</li>
+    <li>🚛 Use optimized routes for efficiency</li>
+    <li>💰 Track your earnings and payouts</li>
+    <li>⭐ Build your reputation with ratings</li>
+</ul>
+
+<a href="{{ app_url }}/collector" class="button">View Available Jobs</a>
+
+{% elif user_role == "RECYCLER" %}
+<p>As a recycler, you can:</p>
+<ul>
+    <li>🏭 Browse available recyclable materials</li>
+    <li>📊 Track material prices and trends</li>
+    <li>🤝 Connect with residents and businesses</li>
+    <li>♻️ Promote sustainable practices</li>
+</ul>
+
+<a href="{{ app_url }}/recycling" class="button">Browse Marketplace</a>
+{% endif %}
+
+<h2>Need Help?</h2>
+<p>Visit our <a href="{{ app_url }}/support">Help Center</a> or contact us at <a href="mailto:support@tweyonje.ug">support@tweyonje.ug</a></p>
+
+<p style="margin-top: 30px;">
+    <strong>Together, we can make Uganda cleaner! 🌍</strong>
+</p>
+{% endblock %}
