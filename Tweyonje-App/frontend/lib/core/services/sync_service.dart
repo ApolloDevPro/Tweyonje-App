@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import '../database/app_database.dart';
 import 'api_client.dart';
+import 'logger.dart';
 
 /// Represents an action queued for execution when online
 class PendingAction {
@@ -65,14 +67,20 @@ class PendingAction {
       );
 }
 
-/// Service that manages offline action queueing and synchronization
+/// Service that manages offline action queueing and synchronization.
+///
+/// The queue is persisted in the shared SQLite database (`pending_actions`
+/// table) and mirrored by an in-memory cache so the synchronous public getters
+/// ([pendingCount], [hasPendingActions], [getPendingActions]) need no I/O.
 class SyncService {
-  static const String _boxName = 'pending_actions';
+  static const String _table = 'pending_actions';
   static const int _maxRetries = 3;
 
-  late Box<String> _box;
   final ApiClient _apiClient;
   final Connectivity _connectivity;
+
+  /// In-memory cache of queued actions, authoritative for the sync getters.
+  final Map<String, PendingAction> _actions = {};
 
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   Timer? _syncTimer;
@@ -85,8 +93,11 @@ class SyncService {
 
   /// Initialize the sync service and start monitoring connectivity
   Future<void> init() async {
-    await Hive.initFlutter();
-    _box = await Hive.openBox<String>(_boxName);
+    try {
+      await _restoreFromDatabase();
+    } catch (e) {
+      Logger.error('Failed to restore pending actions', error: e);
+    }
 
     // Start listening to connectivity changes
     _connectivitySubscription = _connectivity.onConnectivityChanged.listen((results) {
@@ -109,34 +120,63 @@ class SyncService {
     }
   }
 
+  /// Loads queued actions from SQLite into the in-memory cache.
+  Future<void> _restoreFromDatabase() async {
+    final db = await AppDatabase.instance.database;
+    final rows = await db.query(_table);
+    _actions.clear();
+    for (final row in rows) {
+      try {
+        final action = PendingAction.fromJson(
+          Map<String, dynamic>.from(jsonDecode(row['data'] as String) as Map),
+        );
+        _actions[action.id] = action;
+      } catch (e) {
+        Logger.error('Failed to restore pending action', error: e);
+      }
+    }
+  }
+
   /// Queue an action for later execution when online
   Future<String> queueAction(PendingAction action) async {
-    await _box.put(action.id, jsonEncode(action.toJson()));
-    _emitStatus(SyncStatus.queued(1));
-    
+    _actions[action.id] = action;
+    try {
+      final db = await AppDatabase.instance.database;
+      await db.insert(
+        _table,
+        {
+          'id': action.id,
+          'data': jsonEncode(action.toJson()),
+          'created_at': action.createdAt.toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } catch (e) {
+      Logger.error('Failed to persist pending action', error: e);
+    }
+    _emitStatus(SyncStatus.queued(pendingCount));
+
     // Try immediate sync if online
     _triggerSync();
-    
+
     return action.id;
   }
 
   /// Get count of pending actions
-  int get pendingCount => _box.length;
+  int get pendingCount => _actions.length;
 
   /// Check if there are pending actions
-  bool get hasPendingActions => _box.isNotEmpty;
+  bool get hasPendingActions => _actions.isNotEmpty;
 
   /// Get all pending actions
   List<PendingAction> getPendingActions() {
-    return _box.values
-        .map((json) => PendingAction.fromJson(jsonDecode(json) as Map<String, dynamic>))
-        .toList()
+    return _actions.values.toList()
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
   }
 
   /// Trigger a sync cycle
   Future<void> _triggerSync() async {
-    if (_isSyncing || _box.isEmpty) return;
+    if (_isSyncing || _actions.isEmpty) return;
 
     _isSyncing = true;
     _emitStatus(SyncStatus.syncing(pendingCount));
@@ -148,17 +188,20 @@ class SyncService {
       for (final action in actions) {
         try {
           await _executeAction(action);
-          await _box.delete(action.id);
+          _actions.remove(action.id);
+          await _deleteFromDatabase(action.id);
         } catch (e) {
           // Check if should retry
           if (action.retryCount >= _maxRetries) {
             // Max retries exceeded - delete the action
-            await _box.delete(action.id);
+            _actions.remove(action.id);
+            await _deleteFromDatabase(action.id);
             failCount++;
           } else {
             // Increment retry count and keep in queue
             final updated = action.copyWith(retryCount: action.retryCount + 1);
-            await _box.put(action.id, jsonEncode(updated.toJson()));
+            _actions[action.id] = updated;
+            await _persistAction(updated);
             failCount++;
           }
         }
@@ -213,8 +256,40 @@ class SyncService {
 
   /// Clear all pending actions (use with caution)
   Future<void> clearQueue() async {
-    await _box.clear();
+    _actions.clear();
+    try {
+      final db = await AppDatabase.instance.database;
+      await db.delete(_table);
+    } catch (e) {
+      Logger.error('Failed to clear pending actions', error: e);
+    }
     _emitStatus(SyncStatus.synced());
+  }
+
+  Future<void> _persistAction(PendingAction action) async {
+    try {
+      final db = await AppDatabase.instance.database;
+      await db.insert(
+        _table,
+        {
+          'id': action.id,
+          'data': jsonEncode(action.toJson()),
+          'created_at': action.createdAt.toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } catch (e) {
+      Logger.error('Failed to persist pending action', error: e);
+    }
+  }
+
+  Future<void> _deleteFromDatabase(String id) async {
+    try {
+      final db = await AppDatabase.instance.database;
+      await db.delete(_table, where: 'id = ?', whereArgs: [id]);
+    } catch (e) {
+      Logger.error('Failed to remove pending action from database', error: e);
+    }
   }
 
   void _emitStatus(SyncStatus status) {
@@ -228,7 +303,7 @@ class SyncService {
     await _connectivitySubscription?.cancel();
     _syncTimer?.cancel();
     await _syncStatusController.close();
-    await _box.close();
+    _actions.clear();
   }
 }
 

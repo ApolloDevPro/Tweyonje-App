@@ -35,6 +35,14 @@ class LocalStorage {
     return _prefs?.getString(AppConstants.accessTokenKey);
   }
 
+  Future<void> saveAccessToken(String token) async {
+    await init();
+    try {
+      await _secureStorage.write(key: AppConstants.accessTokenKey, value: token);
+    } catch (_) {}
+    await _prefs?.setString(AppConstants.accessTokenKey, token);
+  }
+
   Future<String?> getRefreshToken() async {
     await init();
     try {

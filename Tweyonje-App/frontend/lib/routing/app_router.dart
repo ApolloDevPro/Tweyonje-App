@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/otp_verification_screen.dart';
 import '../features/auth/register_screen.dart';
-import '../core/screens/supabase_test_screen.dart';
 import '../features/admin/admin_analytics_screen.dart';
 import '../features/admin/admin_dashboard_screen.dart';
 import '../features/admin/admin_home_screen.dart';
@@ -141,10 +140,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/onboarding',
         builder: (context, state) => const OnboardingScreen(),
-      ),
-      GoRoute(
-        path: '/supabase-test',
-        builder: (context, state) => const SupabaseTestScreen(),
       ),
       GoRoute(
         path: '/verify-otp',

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/l10n/app_strings.dart';
 import 'core/services/push_notification_service.dart';
 import 'core/services/sync_service.dart';
@@ -15,12 +14,6 @@ import 'core/security/security_config.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Supabase
-  await Supabase.initialize(
-    url: 'https://knskyxabdwxutyriravt.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtuc2t5eGFiZHd4dXR5cmlyYXZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwNDE2MDAsImV4cCI6MjEwNDYxNzYwMH0.Tx5fuOnpC2z0PRu5jzEznko34nnbRyH-sk7Txq7f8jk',
-  );
 
   // Initialize security configuration
   SecurityConfig.instance.initialize(

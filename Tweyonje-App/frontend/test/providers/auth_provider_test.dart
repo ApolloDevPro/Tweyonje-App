@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:tweyonje/core/services/api_client.dart';
+import 'package:tweyonje/core/services/local_auth_service.dart';
 import 'package:tweyonje/core/storage/local_storage.dart';
 import 'package:tweyonje/models/models.dart';
 import 'package:tweyonje/providers/auth_provider.dart';
@@ -17,6 +18,44 @@ class FakeApiClient implements ApiClient {
   Future<Response> login(String emailOrPhone, String password) {
     return onLogin!(emailOrPhone, password);
   }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('${invocation.memberName} is not stubbed');
+}
+
+class FakeAuthService implements LocalAuthService {
+  AuthSession? sessionToReturn;
+  AuthSession? sessionForCurrentUser;
+  Object? loginError;
+
+  @override
+  User? get currentUser => sessionForCurrentUser?.user;
+
+  @override
+  Stream<AuthEvent> get authStateChanges => const Stream.empty();
+
+  @override
+  Future<AuthSession> login({
+    required String email,
+    required String password,
+  }) async {
+    if (loginError != null) {
+      throw loginError!;
+    }
+    return sessionToReturn ??
+        AuthSession(
+          access: 'access-token',
+          refresh: 'refresh-token',
+          user: User.fromJson(_userJson),
+        );
+  }
+
+  @override
+  Future<bool> logout() async => true;
+
+  @override
+  Future<User?> getCurrentUser() async => sessionForCurrentUser?.user;
 
   @override
   dynamic noSuchMethod(Invocation invocation) =>
@@ -47,18 +86,20 @@ void main() {
 
   late FakeApiClient api;
   late LocalStorage storage;
+  late FakeAuthService auth;
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     api = FakeApiClient();
     storage = LocalStorage();
+    auth = FakeAuthService();
   });
 
   group('AuthNotifier', () {
     test('login succeeds and persists the session', () async {
       api.onLogin = (_, _) async => _okResponse(_sessionJson);
 
-      final notifier = AuthNotifier(api, storage);
+      final notifier = AuthNotifier(api, storage, auth);
       final success = await notifier.login('resident@tweyonje.ug', 'Password123!');
 
       expect(success, isTrue);
@@ -68,17 +109,17 @@ void main() {
     });
 
     test('login failure surfaces the API detail message', () async {
-      api.onLogin = (_, _) => throw DioException(
-            requestOptions: RequestOptions(path: '/auth/login/'),
-            type: DioExceptionType.badResponse,
-            response: Response(
-              requestOptions: RequestOptions(path: '/auth/login/'),
-              statusCode: 400,
-              data: {'detail': 'Invalid credentials'},
-            ),
-          );
+      auth.loginError = DioException(
+        requestOptions: RequestOptions(path: '/auth/login/'),
+        type: DioExceptionType.badResponse,
+        response: Response(
+          requestOptions: RequestOptions(path: '/auth/login/'),
+          statusCode: 400,
+          data: {'detail': 'Invalid credentials'},
+        ),
+      );
 
-      final notifier = AuthNotifier(api, storage);
+      final notifier = AuthNotifier(api, storage, auth);
       final success = await notifier.login('resident@tweyonje.ug', 'wrong');
 
       expect(success, isFalse);
@@ -90,7 +131,7 @@ void main() {
       await storage.saveTokens(access: 'stored-access', refresh: 'stored-refresh');
       await storage.saveUser(User.fromJson(_userJson));
 
-      final notifier = AuthNotifier(api, storage);
+      final notifier = AuthNotifier(api, storage, auth);
       await notifier.hydrate();
 
       expect(notifier.state.status, AuthStatus.authenticated);
@@ -101,7 +142,7 @@ void main() {
     test('logout clears the session', () async {
       api.onLogin = (_, _) async => _okResponse(_sessionJson);
 
-      final notifier = AuthNotifier(api, storage);
+      final notifier = AuthNotifier(api, storage, auth);
       await notifier.login('resident@tweyonje.ug', 'Password123!');
 
       await notifier.logout();
@@ -114,7 +155,7 @@ void main() {
     test('session expiry signs the user out and clears storage', () async {
       api.onLogin = (_, _) async => _okResponse(_sessionJson);
 
-      final notifier = AuthNotifier(api, storage);
+      final notifier = AuthNotifier(api, storage, auth);
       await notifier.login('resident@tweyonje.ug', 'Password123!');
       expect(notifier.state.status, AuthStatus.authenticated);
 

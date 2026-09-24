@@ -1,83 +1,157 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sqflite/sqflite.dart';
 import 'dart:convert';
 import '../../models/models.dart';
+import '../database/app_database.dart';
 import '../services/logger.dart';
+import '../utils/geo.dart';
 
+/// Offline storage backed by the shared local SQLite database.
+///
+/// Replaces the previous Hive boxes with tables owned by [AppDatabase]. The
+/// public API is unchanged so callers keep working without modification.
 class OfflineStorage {
-  static const String _wasteRequestsBoxName = 'waste_requests';
-  static const String _syncQueueBoxName = 'sync_queue';
-  static const String _userProfileBoxName = 'user_profile';
-  static const String _cachedDataBoxName = 'cached_data';
-
-  late Box<Map> _wasteRequestsBox;
-  late Box<String> _syncQueueBox;
-  late Box<Map> _userProfileBox;
-  late Box<String> _cachedDataBox;
+  static const String _wasteRequestsTable = 'waste_requests';
+  static const String _syncQueueTable = 'sync_queue';
+  static const String _userProfileTable = 'user_profile';
+  static const String _cachedDataKeyPrefix = 'cached_data:';
+  static const String _userProfileKey = 'current';
 
   Future<void> init() async {
-    if (kIsWeb) {
-      // path_provider is not available on the web. Hive uses IndexedDB
-      // when initialized with a database name instead of a file path.
-      Hive.init('tweyonje_offline');
-    } else {
-      await Hive.initFlutter();
-    }
-
-    // Register adapters if needed
-    // Hive.registerAdapter(WasteRequestAdapter());
-    
-    _wasteRequestsBox = await Hive.openBox<Map>(_wasteRequestsBoxName);
-    _syncQueueBox = await Hive.openBox<String>(_syncQueueBoxName);
-    _userProfileBox = await Hive.openBox<Map>(_userProfileBoxName);
-    _cachedDataBox = await Hive.openBox<String>(_cachedDataBoxName);
-    
+    // Opening the shared database also (re)creates the schema if needed.
+    await AppDatabase.instance.database;
     Logger.info('Offline storage initialized');
   }
 
   // Waste Requests
   Future<void> saveWasteRequest(WasteRequest request) async {
-    await _wasteRequestsBox.put(request.id, request.toJson());
+    final db = await AppDatabase.instance.database;
+    final lat = request.latitude;
+    final lon = request.longitude;
+    await db.insert(
+      _wasteRequestsTable,
+      {
+        'id': request.id,
+        'data': jsonEncode(request.toJson()),
+        'created_at': request.createdAt ?? DateTime.now().toIso8601String(),
+        'geohash': (lat != null && lon != null)
+            ? GeoUtils.encode(lat, lon,
+                precision: AppDatabase.storedGeohashPrecision)
+            : null,
+        'lat': lat,
+        'lon': lon,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
     Logger.debug('Saved waste request offline: ${request.id}');
   }
 
   Future<WasteRequest?> getWasteRequest(String id) async {
-    final data = _wasteRequestsBox.get(id);
-    if (data != null) {
-      return WasteRequest.fromJson(Map<String, dynamic>.from(data));
-    }
-    return null;
+    final db = await AppDatabase.instance.database;
+    final rows = await db.query(
+      _wasteRequestsTable,
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return _decodeWasteRequest(rows.first['data']);
   }
 
   Future<List<WasteRequest>> getAllWasteRequests() async {
+    final db = await AppDatabase.instance.database;
+    final rows = await db.query(_wasteRequestsTable);
     final requests = <WasteRequest>[];
-    for (final key in _wasteRequestsBox.keys) {
-      final data = _wasteRequestsBox.get(key);
-      if (data != null) {
-        requests.add(WasteRequest.fromJson(Map<String, dynamic>.from(data)));
+    for (final row in rows) {
+      final request = _decodeWasteRequest(row['data']);
+      if (request != null) requests.add(request);
+    }
+    return requests;
+  }
+
+  /// Waste requests within [radiusMeters] of the given point, nearest first.
+  ///
+  /// Spatial filtering uses a geohash prefix scan over the request's cell and
+  /// its 8 neighbors; exact filtering/sorting uses the Haversine distance.
+  Future<List<WasteRequest>> getWasteRequestsNear({
+    required double latitude,
+    required double longitude,
+    double radiusMeters = 5000,
+    int? limit,
+  }) async {
+    final db = await AppDatabase.instance.database;
+    final center = GeoUtils.encode(
+      latitude,
+      longitude,
+      precision: GeoUtils.precisionForRadius(radiusMeters, latitude: latitude),
+    );
+    final cells = GeoUtils.neighborhood(center);
+
+    final where = List.filled(cells.length, 'geohash LIKE ?').join(' OR ');
+    final args = cells.map((cell) => '$cell%').toList();
+
+    final rows = await db.query(
+      _wasteRequestsTable,
+      where: where,
+      whereArgs: args,
+    );
+
+    final results = <({double distance, WasteRequest request})>[];
+    for (final row in rows) {
+      final request = _decodeWasteRequest(row['data']);
+      if (request == null ||
+          request.latitude == null ||
+          request.longitude == null) {
+        continue;
       }
+      final distance = GeoUtils.distanceMeters(
+        latitude,
+        longitude,
+        request.latitude!,
+        request.longitude!,
+      );
+      if (distance <= radiusMeters) {
+        results.add((distance: distance, request: request));
+      }
+    }
+
+    results.sort((a, b) => a.distance.compareTo(b.distance));
+    final requests = results.map((e) => e.request).toList();
+    if (limit != null && requests.length > limit) {
+      return requests.sublist(0, limit);
     }
     return requests;
   }
 
   Future<void> deleteWasteRequest(String id) async {
-    await _wasteRequestsBox.delete(id);
+    final db = await AppDatabase.instance.database;
+    await db.delete(
+      _wasteRequestsTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     Logger.debug('Deleted waste request: $id');
   }
 
   // Sync Queue
   Future<void> addToSyncQueue(Map<String, dynamic> operation) async {
-    final operationJson = jsonEncode(operation);
-    await _syncQueueBox.add(operationJson);
+    final db = await AppDatabase.instance.database;
+    await db.insert(_syncQueueTable, {
+      'operation_id': operation['id']?.toString(),
+      'data': jsonEncode(operation),
+      'created_at': DateTime.now().toIso8601String(),
+    });
     Logger.debug('Added operation to sync queue: ${operation['type']}');
   }
 
   Future<List<Map<String, dynamic>>> getSyncQueue() async {
+    final db = await AppDatabase.instance.database;
+    final rows = await db.query(_syncQueueTable, orderBy: 'created_at ASC');
     final operations = <Map<String, dynamic>>[];
-    for (final operationJson in _syncQueueBox.values) {
+    for (final row in rows) {
       try {
-        final operation = jsonDecode(operationJson) as Map<String, dynamic>;
+        final operation =
+            jsonDecode(row['data'] as String) as Map<String, dynamic>;
         operations.add(operation);
       } catch (e) {
         Logger.error('Failed to parse sync queue operation', error: e);
@@ -87,88 +161,147 @@ class OfflineStorage {
   }
 
   Future<void> removeFromSyncQueue(String operationId) async {
-    // Find and remove the operation by ID
-    final operations = await getSyncQueue();
-    for (int i = 0; i < operations.length; i++) {
-      if (operations[i]['id'] == operationId) {
-        await _syncQueueBox.deleteAt(i);
-        Logger.debug('Removed operation from sync queue: $operationId');
-        break;
-      }
-    }
+    final db = await AppDatabase.instance.database;
+    await db.delete(
+      _syncQueueTable,
+      where: 'operation_id = ?',
+      whereArgs: [operationId],
+    );
+    Logger.debug('Removed operation from sync queue: $operationId');
   }
 
   Future<void> clearSyncQueue() async {
-    await _syncQueueBox.clear();
+    final db = await AppDatabase.instance.database;
+    await db.delete(_syncQueueTable);
     Logger.info('Cleared sync queue');
   }
 
   // User Profile
   Future<void> saveUserProfile(User user) async {
-    await _userProfileBox.put('current', user.toJson());
+    final db = await AppDatabase.instance.database;
+    await db.insert(
+      _userProfileTable,
+      {
+        'key': _userProfileKey,
+        'data': jsonEncode(user.toJson()),
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
     Logger.debug('Saved user profile offline');
   }
 
   Future<User?> getUserProfile() async {
-    final data = _userProfileBox.get('current');
-    if (data != null) {
-      return User.fromJson(Map<String, dynamic>.from(data));
+    final db = await AppDatabase.instance.database;
+    final rows = await db.query(
+      _userProfileTable,
+      where: 'key = ?',
+      whereArgs: [_userProfileKey],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    try {
+      return User.fromJson(
+        Map<String, dynamic>.from(
+          jsonDecode(rows.first['data'] as String) as Map,
+        ),
+      );
+    } catch (e) {
+      Logger.error('Failed to parse user profile', error: e);
+      return null;
     }
-    return null;
   }
 
   // Cached Data
   Future<void> cacheData(String key, dynamic data) async {
-    final dataJson = jsonEncode(data);
-    await _cachedDataBox.put(key, dataJson);
+    final db = await AppDatabase.instance.database;
+    await db.insert(
+      'cached_data',
+      {
+        'key': '$_cachedDataKeyPrefix$key',
+        'value': jsonEncode(data),
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
     Logger.debug('Cached data: $key');
   }
 
   Future<T?> getCachedData<T>(String key) async {
-    final dataJson = _cachedDataBox.get(key);
-    if (dataJson != null) {
-      try {
-        final data = jsonDecode(dataJson);
-        return data as T;
-      } catch (e) {
-        Logger.error('Failed to parse cached data: $key', error: e);
-      }
+    final db = await AppDatabase.instance.database;
+    final rows = await db.query(
+      'cached_data',
+      where: 'key = ?',
+      whereArgs: ['$_cachedDataKeyPrefix$key'],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    try {
+      final data = jsonDecode(rows.first['value'] as String);
+      return data as T;
+    } catch (e) {
+      Logger.error('Failed to parse cached data: $key', error: e);
+      return null;
     }
-    return null;
   }
 
   Future<void> clearCachedData(String key) async {
-    await _cachedDataBox.delete(key);
+    final db = await AppDatabase.instance.database;
+    await db.delete(
+      'cached_data',
+      where: 'key = ?',
+      whereArgs: ['$_cachedDataKeyPrefix$key'],
+    );
     Logger.debug('Cleared cached data: $key');
   }
 
   Future<void> clearAllCachedData() async {
-    await _cachedDataBox.clear();
+    final db = await AppDatabase.instance.database;
+    await db.delete('cached_data');
     Logger.info('Cleared all cached data');
   }
 
   // Storage management
   Future<int> getStorageSize() async {
-    return _wasteRequestsBox.length + 
-           _syncQueueBox.length + 
-           _userProfileBox.length + 
-           _cachedDataBox.length;
+    final db = await AppDatabase.instance.database;
+    final counts = await Future.wait([
+      _countRows(db, _wasteRequestsTable),
+      _countRows(db, _syncQueueTable),
+      _countRows(db, _userProfileTable),
+      _countRows(db, 'cached_data'),
+    ]);
+    return counts.reduce((a, b) => a + b);
   }
 
   Future<void> clearAllData() async {
-    await _wasteRequestsBox.clear();
-    await _syncQueueBox.clear();
-    await _userProfileBox.clear();
-    await _cachedDataBox.clear();
+    final db = await AppDatabase.instance.database;
+    await db.delete(_wasteRequestsTable);
+    await db.delete(_syncQueueTable);
+    await db.delete(_userProfileTable);
+    await db.delete('cached_data');
     Logger.info('Cleared all offline storage data');
   }
 
   Future<void> close() async {
-    await _wasteRequestsBox.close();
-    await _syncQueueBox.close();
-    await _userProfileBox.close();
-    await _cachedDataBox.close();
+    await AppDatabase.instance.close();
     Logger.info('Closed offline storage');
+  }
+
+  WasteRequest? _decodeWasteRequest(Object? data) {
+    if (data == null) return null;
+    try {
+      return WasteRequest.fromJson(
+        Map<String, dynamic>.from(jsonDecode(data as String) as Map),
+      );
+    } catch (e) {
+      Logger.error('Failed to parse waste request', error: e);
+      return null;
+    }
+  }
+
+  Future<int> _countRows(Database db, String table) async {
+    final result = await db.rawQuery('SELECT COUNT(*) AS count FROM $table');
+    return (result.first['count'] as int?) ?? 0;
   }
 }
 

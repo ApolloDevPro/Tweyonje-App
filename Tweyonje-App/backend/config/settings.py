@@ -96,6 +96,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "django_filters",
     "drf_spectacular",
+    "drf_spectacular_sidecar",
     "whitenoise.runserver_nostatic",
     "core",
     "apps.accounts",
@@ -214,6 +215,7 @@ MIDDLEWARE = [
 # DATABASE_URL takes precedence (set by Railway, Heroku, etc.)
 # Otherwise, uses DB_ENGINE to determine database type
 DATABASE_URL = os.getenv("DATABASE_URL")
+DB_ENGINE = os.getenv("DB_ENGINE", "")
 
 if DATABASE_URL:
     # Use DATABASE_URL (e.g., postgres://user:pass@host:port/dbname)
@@ -340,6 +342,9 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Together for a Cleaner Uganda - Smart Waste Management API",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    # Serve Swagger UI / ReDoc assets locally instead of from a CDN.
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "REDOC_DIST": "SIDECAR",
 }
 
 # App settings

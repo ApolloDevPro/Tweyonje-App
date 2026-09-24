@@ -110,4 +110,8 @@ class Logger {
   static void logPerformance(String operation, Duration duration) {
     info('Performance: $operation took ${duration.inMilliseconds}ms');
   }
+
+  static void logRealtimeEvent(String channel, Map<String, dynamic> payload) {
+    info('Realtime Event: $channel', error: payload);
+  }
 }
