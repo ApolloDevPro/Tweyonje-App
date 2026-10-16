@@ -1,5 +1,3 @@
-import com.android.build.api.dsl.ApplicationExtension
-
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -7,7 +5,7 @@ plugins {
     id("com.google.gms.google-services")
 }
 
-configure<ApplicationExtension> {
+android {
     namespace = "ug.tweyonje.tweyonje"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion

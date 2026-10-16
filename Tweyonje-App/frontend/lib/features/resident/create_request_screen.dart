@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -25,6 +26,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
   final bool _isEmergency = false;
   bool _isSubmitting = false;
   String _selectedSlot = 'MORNING_8_12';
+  DateTime _scheduledDate = DateTime.now().add(const Duration(days: 1));
 
   @override
   void initState() {
@@ -53,6 +55,12 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
   }
 
   Future<void> _handleSubmit() async {
+    if (_selectedCategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a waste category')),
+      );
+      return;
+    }
     if (_addressController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter or select a pickup address')),
@@ -68,14 +76,21 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
       'pickup_address': _addressController.text.trim(),
       'latitude': _latitude,
       'longitude': _longitude,
+      'scheduled_date': _scheduledDate.toIso8601String().split('T').first,
       'scheduled_time_slot': _selectedSlot,
       'is_emergency': _isEmergency,
       'special_instructions': _instructionsController.text.trim(),
     };
 
-    final success = await ref.read(wasteRequestsProvider.notifier).createRequest(payload);
-
-    setState(() => _isSubmitting = false);
+    var success = false;
+    Object? submitError;
+    try {
+      success = await ref.read(wasteRequestsProvider.notifier).createRequest(payload);
+    } catch (error) {
+      submitError = error;
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -86,13 +101,31 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
       );
       context.pop();
     } else if (mounted) {
+      final message = _requestErrorMessage(submitError);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to create request. Please check details.'),
+        SnackBar(
+          content: Text(message),
           backgroundColor: AppColors.danger,
         ),
       );
     }
+  }
+
+  String _requestErrorMessage(Object? error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map) {
+        final detail = data['detail'];
+        if (detail is String && detail.isNotEmpty) return detail;
+        for (final value in data.values) {
+          if (value is List && value.isNotEmpty) return value.first.toString();
+          if (value is String && value.isNotEmpty) return value;
+        }
+      }
+    }
+    return error == null
+        ? 'The server could not create the request. Please try again.'
+        : 'Could not create the pickup request: $error';
   }
 
   @override
@@ -247,6 +280,28 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+
+            // Scheduled pickup date
+            Text('Pickup Date', style: AppTypography.h5),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () async {
+                final date = await showDatePicker(
+                  context: context,
+                  initialDate: _scheduledDate,
+                  firstDate: DateTime.now(),
+                  lastDate: DateTime.now().add(const Duration(days: 365)),
+                );
+                if (date != null && mounted) {
+                  setState(() => _scheduledDate = date);
+                }
+              },
+              icon: const Icon(Icons.calendar_today_outlined),
+              label: Text(
+                MaterialLocalizations.of(context).formatMediumDate(_scheduledDate),
+              ),
             ),
             const SizedBox(height: AppSpacing.lg),
 

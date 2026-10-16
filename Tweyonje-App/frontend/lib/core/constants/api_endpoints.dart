@@ -9,11 +9,9 @@ class ApiEndpoints {
   static const String logout = '/auth/logout/';
   static const String me = '/auth/me/';
   static const String passwordReset = '/auth/password-reset/';
-  static const String passwordResetConfirm = '/auth/password-reset-confirm/';
+  static const String passwordResetConfirm = '/auth/password-reset/confirm/';
   static const String verifyOtp = '/auth/otp/verify/';
   static const String resendOtp = '/auth/otp/send/';
-  static const String changePassword = '/auth/change-password/';
-  static const String consent = '/auth/consent/';
 
   // ── Profile ──
   static const String profile = '/profiles/me/';
@@ -37,8 +35,6 @@ class ApiEndpoints {
   // ── Schedules ──
   static const String schedules = '/waste-requests/schedules/';
   static String schedule(String id) => '/waste-requests/schedules/$id/';
-  static String toggleSchedule(String id) =>
-      '/waste-requests/schedules/$id/toggle/';
 
   // ── Collection Slots ──
   static const String collectionSlots = '/collections/slots/';
@@ -46,15 +42,19 @@ class ApiEndpoints {
   // ── Assignments ──
   static const String assignments = '/collections/assignments/';
   static String assignment(String id) => '/collections/assignments/$id/';
-  static String assignmentTransition(String id) =>
-      '/collections/assignments/$id/transition/';
+  static String assignmentStartTrip(String id) =>
+      '/collections/assignments/$id/start_trip/';
+  static String assignmentArrive(String id) =>
+      '/collections/assignments/$id/arrive/';
+  static String assignmentComplete(String id) =>
+      '/collections/assignments/$id/complete/';
+  static String assignmentReject(String id) =>
+      '/collections/assignments/$id/reject/';
 
   // ── Shifts ──
   static const String shifts = '/collections/shifts/';
   static String shift(String id) => '/collections/shifts/$id/';
-  static const String activeShift = '/collections/shifts/active/';
-  static const String startShift = '/collections/shifts/start/';
-  static String endShift(String id) => '/collections/shifts/$id/end/';
+  static String shiftEnd(String id) => '/collections/shifts/$id/end_shift/';
 
   // ── Collector Dashboard ──
   static const String collectorDashboard = '/collections/dashboard/';
@@ -96,13 +96,14 @@ class ApiEndpoints {
   // ── Reports (Illegal Dumping) ──
   static const String reports = '/reports/';
   static String report(String id) => '/reports/$id/';
+  static String reportResolve(String id) => '/reports/$id/resolve/';
   static String reportPhotos(String reportId) => '/reports/$reportId/photos/';
   static const String myReports = '/reports/';
 
   // ── Tracking ──
   static const String trackingUpdate = '/tracking/live/';
-  static String trackingLive(String requestId) =>
-      '/tracking/collector/$requestId/';
+  static String trackingLive(String assignmentId) =>
+      '/tracking/collector/$assignmentId/';
 
   // ── Support ──
   static const String supportTickets = '/support/tickets/';
@@ -131,10 +132,15 @@ class ApiEndpoints {
   static String incident(String id) => '/ratings/incidents/$id/';
 
   // ── Recycling ──
-  static const String recyclingOffers = '/recycling/offers/';
-  static String recyclingOffer(String id) => '/recycling/offers/$id/';
-  static const String myOffers = '/recycling/offers/';
-  static const String recyclingTransactions = '/recycling/transactions/';
+  static const String recyclingMaterials = '/recycling/materials/';
+  static const String recyclingCenters = '/recycling/centers/';
+  static const String recyclingMarketplace = '/recycling/marketplace/';
+  static String recyclingListing(String id) => '/recycling/marketplace/$id/';
+  static String recyclingListingReserve(String id) =>
+      '/recycling/marketplace/$id/reserve/';
+  static String recyclingListingSold(String id) =>
+      '/recycling/marketplace/$id/mark_sold/';
+  static const String recyclingTradeIns = '/recycling/trade-ins/';
 
   // ── AI / Classification ──
   static const String classify = '/ai/classify-waste/';

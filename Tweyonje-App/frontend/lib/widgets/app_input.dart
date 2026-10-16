@@ -14,6 +14,10 @@ class AppInput extends StatefulWidget {
   final void Function(String)? onChanged;
   final int maxLines;
   final bool enabled;
+  final List<String>? autofillHints;
+  final TextInputAction? textInputAction;
+  final void Function(String)? onFieldSubmitted;
+  final TextCapitalization textCapitalization;
 
   const AppInput({
     super.key,
@@ -29,6 +33,10 @@ class AppInput extends StatefulWidget {
     this.onChanged,
     this.maxLines = 1,
     this.enabled = true,
+    this.autofillHints,
+    this.textInputAction,
+    this.onFieldSubmitted,
+    this.textCapitalization = TextCapitalization.none,
   });
 
   @override
@@ -66,6 +74,10 @@ class _AppInputState extends State<AppInput> {
           enabled: widget.enabled,
           validator: widget.validator,
           onChanged: widget.onChanged,
+          autofillHints: widget.autofillHints,
+          textInputAction: widget.textInputAction,
+          textCapitalization: widget.textCapitalization,
+          onFieldSubmitted: widget.onFieldSubmitted,
           style: AppTypography.body,
           decoration: InputDecoration(
             hintText: widget.hint,

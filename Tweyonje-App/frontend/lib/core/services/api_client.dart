@@ -225,7 +225,12 @@ class ApiClient {
     required String fullName,
     required String role,
     String? phone,
+    String? consentPolicyVersion,
+    String preferredLanguage = 'en',
   }) {
+    // DRF's phone field is `required=False, allow_blank=True` but NOT
+    // `allow_null` — sending `"phone": null` is rejected with a 400, so the
+    // key must be omitted entirely when there is no number.
     return post(
       ApiEndpoints.register,
       data: {
@@ -233,18 +238,66 @@ class ApiClient {
         'password': password,
         'full_name': fullName,
         'role': role,
-        'phone': phone,
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
+        if (consentPolicyVersion != null && consentPolicyVersion.isNotEmpty)
+          'consent_policy_version': consentPolicyVersion,
+        'preferred_language': preferredLanguage,
       },
     );
   }
 
-Future<Response> verifyOtp(String emailOrPhone, String code,
-    {String purpose = 'PHONE_VERIFY'}) {
-  return post(
-    ApiEndpoints.verifyOtp,
-    data: {'identifier': emailOrPhone, 'otp_code': code, 'purpose': purpose},
-  );
-}
+  Future<Response> logout(String refreshToken) {
+    return post(
+      ApiEndpoints.logout,
+      data: {'refresh': refreshToken},
+    );
+  }
+
+  Future<Response> registerDevice(String token) {
+    return post(
+      ApiEndpoints.registerDevice,
+      data: {'token': token, 'device_type': 'mobile'},
+    );
+  }
+
+  Future<Response> unregisterDevice(String token) {
+    return post(
+      ApiEndpoints.unregisterDevice,
+      data: {'token': token},
+    );
+  }
+
+  Future<Response> sendOtp(String identifier, {String purpose = 'PHONE_VERIFY'}) {
+    return post(
+      ApiEndpoints.resendOtp,
+      data: {'identifier': identifier, 'purpose': purpose},
+    );
+  }
+
+  Future<Response> verifyOtp(
+    String emailOrPhone,
+    String code, {
+    String purpose = 'PHONE_VERIFY',
+  }) {
+    return post(
+      ApiEndpoints.verifyOtp,
+      data: {'identifier': emailOrPhone, 'otp_code': code, 'purpose': purpose},
+    );
+  }
+
+  Future<Response> requestPasswordReset(String email) {
+    return post(ApiEndpoints.passwordReset, data: {'email': email});
+  }
+
+  Future<Response> confirmPasswordReset({
+    required String token,
+    required String newPassword,
+  }) {
+    return post(
+      ApiEndpoints.passwordResetConfirm,
+      data: {'token': token, 'new_password': newPassword},
+    );
+  }
 
   Future<Response> getProfile() {
     return get(ApiEndpoints.profile);
@@ -298,18 +351,47 @@ Future<Response> verifyOtp(String emailOrPhone, String code,
     return get(ApiEndpoints.collectorDashboard);
   }
 
+  Future<Response> getAssignments({String? status}) {
+    return get(
+      ApiEndpoints.assignments,
+      queryParameters: {'status': ?status},
+    );
+  }
+
   Future<Response> startShift() {
-    return post(ApiEndpoints.startShift);
+    return post(ApiEndpoints.shifts);
   }
 
   Future<Response> endShift(String shiftId) {
-    return post(ApiEndpoints.endShift(shiftId));
+    return post(ApiEndpoints.shiftEnd(shiftId));
   }
 
-  Future<Response> updateAssignmentStatus(String assignmentId, String status) {
+  Future<Response> assignmentStartTrip(String assignmentId) {
+    return post(ApiEndpoints.assignmentStartTrip(assignmentId));
+  }
+
+  Future<Response> assignmentArrive(String assignmentId) {
+    return post(ApiEndpoints.assignmentArrive(assignmentId));
+  }
+
+  Future<Response> assignmentComplete(
+    String assignmentId, {
+    double? collectedWeightKg,
+    String? notes,
+  }) {
     return post(
-      ApiEndpoints.assignmentTransition(assignmentId),
-      data: {'status': status},
+      ApiEndpoints.assignmentComplete(assignmentId),
+      data: {
+        'collected_weight_kg': ?collectedWeightKg,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+      },
+    );
+  }
+
+  Future<Response> assignmentReject(String assignmentId, {String? reason}) {
+    return post(
+      ApiEndpoints.assignmentReject(assignmentId),
+      data: {if (reason != null && reason.isNotEmpty) 'reason': reason},
     );
   }
 
@@ -353,13 +435,67 @@ Future<Response> verifyOtp(String emailOrPhone, String code,
     return get(ApiEndpoints.myReports);
   }
 
-  // ── Recycling ──
-  Future<Response> getRecyclingOffers() {
-    return get(ApiEndpoints.recyclingOffers);
+  Future<Response> getReports({String? status, String? severity}) {
+    return get(
+      ApiEndpoints.reports,
+      queryParameters: {
+        if (status != null && status.isNotEmpty) 'status': status,
+        if (severity != null && severity.isNotEmpty) 'severity': severity,
+      },
+    );
   }
 
-  Future<Response> createRecyclingOffer(Map<String, dynamic> data) {
-    return post(ApiEndpoints.recyclingOffers, data: data);
+  Future<Response> resolveReport(String id, {String? notes}) {
+    return post(
+      ApiEndpoints.reportResolve(id),
+      data: {
+        if (notes != null && notes.trim().isNotEmpty)
+          'resolution_notes': notes.trim(),
+      },
+    );
+  }
+
+  // ── Recycling ──
+  Future<Response> getRecyclableMaterials() {
+    return get(ApiEndpoints.recyclingMaterials);
+  }
+
+  Future<Response> getRecyclingCenters() {
+    return get(ApiEndpoints.recyclingCenters);
+  }
+
+  Future<Response> getMarketplaceListings({String? status}) {
+    return get(
+      ApiEndpoints.recyclingMarketplace,
+      queryParameters: {'status': ?status},
+    );
+  }
+
+  Future<Response> createMarketplaceListing(Map<String, dynamic> data) {
+    return post(ApiEndpoints.recyclingMarketplace, data: data);
+  }
+
+  Future<Response> reserveListing(String id) {
+    return post(ApiEndpoints.recyclingListingReserve(id));
+  }
+
+  Future<Response> markListingSold(String id) {
+    return post(ApiEndpoints.recyclingListingSold(id));
+  }
+
+  Future<Response> getTradeIns({String? status}) {
+    return get(
+      ApiEndpoints.recyclingTradeIns,
+      queryParameters: {'status': ?status},
+    );
+  }
+
+  Future<Response> createTradeIn(Map<String, dynamic> data) {
+    return post(ApiEndpoints.recyclingTradeIns, data: data);
+  }
+
+  Future<Response> verifyTradeIn(String id) {
+    return post('${ApiEndpoints.recyclingTradeIns}$id/verify/');
   }
 
   // ── Notifications ──
@@ -398,6 +534,54 @@ Future<Response> verifyOtp(String emailOrPhone, String code,
     return post(ApiEndpoints.adminUsers, data: data);
   }
 
+  Future<Response> getVerifications({String? status}) {
+    return get(
+      ApiEndpoints.adminVerifications,
+      queryParameters: {'status': ?status},
+    );
+  }
+
+  Future<Response> approveVerification(String id, {String? notes}) {
+    return post(
+      ApiEndpoints.approveVerification(id),
+      data: {if (notes != null && notes.isNotEmpty) 'notes': notes},
+    );
+  }
+
+  Future<Response> rejectVerification(String id, {String? notes}) {
+    return post(
+      ApiEndpoints.rejectVerification(id),
+      data: {if (notes != null && notes.isNotEmpty) 'notes': notes},
+    );
+  }
+
+  Future<Response> getSystemSettings() {
+    return get(ApiEndpoints.adminSettings);
+  }
+
+  Future<Response> updateSystemSetting(String id, Map<String, dynamic> data) {
+    return patch(ApiEndpoints.adminSetting(id), data: data);
+  }
+
+  Future<Response> getPrivacyPolicies() {
+    return get(ApiEndpoints.adminPolicies);
+  }
+
+  Future<Response> publishPrivacyPolicy(Map<String, dynamic> data) {
+    return post(ApiEndpoints.adminPublishPolicy, data: data);
+  }
+
+  Future<Response> getNeedsReconsent() {
+    return get(ApiEndpoints.adminNeedsReconsent);
+  }
+
+  Future<Response> getPayouts({String? status}) {
+    return get(
+      ApiEndpoints.payouts,
+      queryParameters: {'status': ?status},
+    );
+  }
+
   // ── Profile ──
   Future<Response> updateProfile(Map<String, dynamic> data) {
     return patch(ApiEndpoints.profileUpdate, data: data);
@@ -412,8 +596,11 @@ Future<Response> verifyOtp(String emailOrPhone, String code,
     return post(ApiEndpoints.schedules, data: data);
   }
 
-  Future<Response> toggleSchedule(String id) {
-    return post(ApiEndpoints.toggleSchedule(id));
+  Future<Response> toggleSchedule(String id, {required bool isActive}) {
+    return patch(
+      ApiEndpoints.schedule(id),
+      data: {'is_active': isActive},
+    );
   }
 
   // ── Invoices / receipts ──
@@ -542,8 +729,8 @@ Future<Response> verifyOtp(String emailOrPhone, String code,
   }
 
   // ── Tracking ──
-  Future<Response> getCollectorLiveLocation(String requestId) {
-    return get(ApiEndpoints.trackingLive(requestId));
+  Future<Response> getCollectorLiveLocation(String assignmentId) {
+    return get(ApiEndpoints.trackingLive(assignmentId));
   }
 }
 

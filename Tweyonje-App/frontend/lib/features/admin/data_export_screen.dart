@@ -1,6 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../core/constants/api_endpoints.dart';
+import '../../core/services/api_client.dart';
 import '../../core/theme/theme.dart';
 import '../../widgets/widgets.dart';
 
@@ -433,19 +438,51 @@ class _ExportButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(_exportScreenProvider);
 
-    return SizedBox(
-      width: double.infinity,
-      child: AppButton(
-        text: 'Export Data',
-        icon: const Icon(Icons.download, size: 18),
-        onPressed: state.selectedDataType != null && !state.isExporting
-            ? () {
-                // Trigger export
-                ref.read(_exportScreenProvider.notifier).export();
-              }
-            : null,
-        isLoading: state.isExporting,
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppButton(
+          text: 'Export Data',
+          icon: const Icon(Icons.download, size: 18),
+          onPressed: state.selectedDataType != null && !state.isExporting
+              ? () {
+                  ref.read(_exportScreenProvider.notifier).export();
+                }
+              : null,
+          isLoading: state.isExporting,
+        ),
+        if (state.message != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: (state.isError ? AppColors.danger : AppColors.success)
+                  .withAlpha(24),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  state.isError ? Icons.error_outline : Icons.check_circle,
+                  size: 18,
+                  color:
+                      state.isError ? AppColors.danger : AppColors.success,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    state.message!,
+                    style: AppTypography.caption.copyWith(
+                      color:
+                          state.isError ? AppColors.danger : AppColors.success,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -456,12 +493,16 @@ class _ExportScreenState {
   final ExportFormat selectedFormat;
   final DateTimeRange? dateRange;
   final bool isExporting;
+  final String? message;
+  final bool isError;
 
   _ExportScreenState({
     this.selectedDataType,
     this.selectedFormat = ExportFormat.csv,
     this.dateRange,
     this.isExporting = false,
+    this.message,
+    this.isError = false,
   });
 
   _ExportScreenState copyWith({
@@ -469,18 +510,24 @@ class _ExportScreenState {
     ExportFormat? selectedFormat,
     DateTimeRange? dateRange,
     bool? isExporting,
+    String? message,
+    bool? isError,
   }) {
     return _ExportScreenState(
       selectedDataType: selectedDataType ?? this.selectedDataType,
       selectedFormat: selectedFormat ?? this.selectedFormat,
       dateRange: dateRange ?? this.dateRange,
       isExporting: isExporting ?? this.isExporting,
+      message: message,
+      isError: isError ?? false,
     );
   }
 }
 
 class _ExportScreenNotifier extends StateNotifier<_ExportScreenState> {
-  _ExportScreenNotifier() : super(_ExportScreenState());
+  final ApiClient _api;
+
+  _ExportScreenNotifier(this._api) : super(_ExportScreenState());
 
   void setDataType(ExportDataType type) {
     state = state.copyWith(selectedDataType: type);
@@ -498,16 +545,101 @@ class _ExportScreenNotifier extends StateNotifier<_ExportScreenState> {
     state = state.copyWith(dateRange: null);
   }
 
-  void export() {
-    state = state.copyWith(isExporting: true);
-    // Simulate export
-    Future.delayed(const Duration(seconds: 2), () {
-      state = state.copyWith(isExporting: false);
-    });
+  Future<List<dynamic>> _fetchData(ExportDataType type) async {
+    switch (type) {
+      case ExportDataType.users:
+        final res = await _api.getAdminUsers();
+        return _toList(res.data);
+      case ExportDataType.wasteRequests:
+        final res = await _api.get(ApiEndpoints.wasteRequests);
+        return _toList(res.data);
+      case ExportDataType.collections:
+        final res = await _api.getAssignments();
+        return _toList(res.data);
+      case ExportDataType.reports:
+        final res = await _api.get(ApiEndpoints.reports);
+        return _toList(res.data);
+      case ExportDataType.payments:
+        final res = await _api.getPayouts();
+        return _toList(res.data);
+      case ExportDataType.verifications:
+        final res = await _api.getVerifications();
+        return _toList(res.data);
+    }
+  }
+
+  List<dynamic> _toList(dynamic data) {
+    if (data is List) return data;
+    if (data is Map && data['results'] is List) return data['results'];
+    return [];
+  }
+
+  String _toCsv(List<dynamic> rows) {
+    if (rows.isEmpty) return '';
+    final headers = <String>{};
+    for (final row in rows) {
+      if (row is Map) headers.addAll(row.keys.map((k) => k.toString()));
+    }
+    final headerList = headers.toList();
+    final buffer = StringBuffer(headerList.join(','));
+    for (final row in rows) {
+      if (row is! Map) continue;
+      buffer.writeln();
+      buffer.write(headerList.map((h) {
+        final v = row[h];
+        final s = v?.toString() ?? '';
+        return s.contains(',') || s.contains('"') || s.contains('\n')
+            ? '"${s.replaceAll('"', '""')}"'
+            : s;
+      }).join(','));
+    }
+    return buffer.toString();
+  }
+
+  Future<void> export() async {
+    final type = state.selectedDataType;
+    if (type == null) return;
+    state = state.copyWith(isExporting: true, message: null, isError: false);
+    try {
+      var rows = await _fetchData(type);
+      final range = state.dateRange;
+      if (range != null) {
+        rows = rows.where((row) {
+          if (row is! Map) return false;
+          final created = row['created_at']?.toString();
+          if (created == null) return false;
+          final dt = DateTime.tryParse(created);
+          if (dt == null) return false;
+          return !dt.isBefore(range.start) && !dt.isAfter(range.end);
+        }).toList();
+      }
+
+      final String payload;
+      if (state.selectedFormat == ExportFormat.csv) {
+        payload = _toCsv(rows);
+      } else {
+        final encoder = const JsonEncoder.withIndent('  ');
+        payload = encoder.convert(rows);
+      }
+
+      await Clipboard.setData(ClipboardData(text: payload));
+      state = state.copyWith(
+        isExporting: false,
+        message:
+            '${rows.length} records copied to clipboard as ${state.selectedFormat.name.toUpperCase()}.',
+        isError: false,
+      );
+    } catch (_) {
+      state = state.copyWith(
+        isExporting: false,
+        message: 'Export failed. Check your connection and try again.',
+        isError: true,
+      );
+    }
   }
 }
 
 final _exportScreenProvider =
     StateNotifierProvider<_ExportScreenNotifier, _ExportScreenState>((ref) {
-  return _ExportScreenNotifier();
+  return _ExportScreenNotifier(ref.watch(apiClientProvider));
 });

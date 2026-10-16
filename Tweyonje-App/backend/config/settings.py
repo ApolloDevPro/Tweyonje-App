@@ -196,20 +196,8 @@ SUPABASE_AUTH_EXEMPT_PATHS = [
     "/api/waste-requests/categories/",  # Public endpoint
 ]
 
-# Add Supabase middleware
-MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "apps.security.middleware.AuditLogMiddleware",
-    "core.middleware.SupabaseAuthMiddleware",  # Supabase JWT auth
-]
+# API bearer tokens are Django SimpleJWT tokens, validated by DRF's
+# JWTAuthentication below. SupabaseAuthMiddleware must not intercept them.
 
 # Database
 # DATABASE_URL takes precedence (set by Railway, Heroku, etc.)

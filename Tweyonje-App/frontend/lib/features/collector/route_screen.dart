@@ -1,29 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/theme/theme.dart';
+import '../../models/models.dart';
+import '../../providers/collector_provider.dart';
 import '../../widgets/widgets.dart';
 
-class RouteScreen extends StatelessWidget {
+class RouteScreen extends ConsumerWidget {
   const RouteScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Demo collection route waypoints across central Kampala
-    final waypoints = [
-      const LatLng(0.3476, 32.5825), // Collector Base
-      const LatLng(0.3520, 32.5870), // Stop 1: Nakasero
-      const LatLng(0.3580, 32.5930), // Stop 2: Kololo
-      const LatLng(0.3640, 32.5890), // Stop 3: Kamwokya
-      const LatLng(0.3700, 32.5750), // Stop 4: Mulago
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dashboardAsync = ref.watch(collectorDashboardProvider);
+    final data = dashboardAsync.valueOrNull;
+    final jobs = (data?.jobs ?? const <CollectorJob>[])
+        .where((j) => j.latitude != null && j.longitude != null)
+        .toList();
+
+    const base = LatLng(0.3476, 32.5825);
+    final jobLatLngs = jobs
+        .map((j) => LatLng(j.latitude!, j.longitude!))
+        .toList();
+    final waypoints = [base, ...jobLatLngs];
+
+    final markers = <AppMapMarker>[
+      const AppMapMarker(
+        latitude: 0.3476,
+        longitude: 32.5825,
+        title: 'Current Location',
+        icon: Icons.local_shipping,
+        color: AppColors.primaryDark,
+      ),
+      for (var i = 0; i < jobs.length; i++)
+        AppMapMarker(
+          latitude: jobs[i].latitude!,
+          longitude: jobs[i].longitude!,
+          title: 'Stop ${i + 1}: ${jobs[i].reference}',
+          icon: Icons.looks_one,
+          color: AppColors.primary,
+        ),
     ];
 
-    final markers = [
-      const AppMapMarker(latitude: 0.3476, longitude: 32.5825, title: 'Current Location', icon: Icons.local_shipping, color: AppColors.primaryDark),
-      const AppMapMarker(latitude: 0.3520, longitude: 32.5870, title: 'Stop 1: #REQ-901', icon: Icons.looks_one, color: AppColors.primary),
-      const AppMapMarker(latitude: 0.3580, longitude: 32.5930, title: 'Stop 2: #REQ-902', icon: Icons.looks_two, color: AppColors.primary),
-      const AppMapMarker(latitude: 0.3640, longitude: 32.5890, title: 'Stop 3: #REQ-903', icon: Icons.looks_3, color: AppColors.primary),
-      const AppMapMarker(latitude: 0.3700, longitude: 32.5750, title: 'Stop 4: #REQ-904', icon: Icons.looks_4, color: AppColors.primary),
-    ];
+    final totalKm = jobs.fold<double>(0, (sum, j) => sum + (j.distanceKm ?? 0));
 
     return Scaffold(
       appBar: AppBar(
@@ -31,7 +49,6 @@ class RouteScreen extends StatelessWidget {
       ),
       body: Stack(
         children: [
-          // Map Background
           AppMap(
             initialLat: 0.3580,
             initialLng: 32.5850,
@@ -40,55 +57,80 @@ class RouteScreen extends StatelessWidget {
             polylinePoints: waypoints,
           ),
 
-          // Bottom Route Summary Card
-          Positioned(
-            left: AppSpacing.lg,
-            right: AppSpacing.lg,
-            bottom: AppSpacing.lg,
-            child: AppCard(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Route Summary', style: AppTypography.h5),
-                          Text('4 Pickups • 14.2 km total', style: AppTypography.caption),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.successLight,
-                          borderRadius: BorderRadius.circular(AppRadius.pill),
+          if (jobs.isEmpty)
+            Positioned(
+              left: AppSpacing.lg,
+              right: AppSpacing.lg,
+              bottom: AppSpacing.lg,
+              child: AppCard(
+                child: const EmptyState(
+                  icon: Icons.map_outlined,
+                  title: 'No Active Jobs',
+                  description:
+                      'Start your shift to see your optimized pickup route here.',
+                ),
+              ),
+            )
+          else
+            Positioned(
+              left: AppSpacing.lg,
+              right: AppSpacing.lg,
+              bottom: AppSpacing.lg,
+              child: AppCard(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Route Summary', style: AppTypography.h5),
+                            Text(
+                              '${jobs.length} Pickups • ${totalKm > 0 ? totalKm.toStringAsFixed(1) : '--'} km total',
+                              style: AppTypography.caption,
+                            ),
+                          ],
                         ),
-                        child: Text(
-                          'SAVING 25% FUEL',
-                          style: AppTypography.caption.copyWith(
-                            color: AppColors.successDark,
-                            fontWeight: FontWeight.w800,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.successLight,
+                            borderRadius: BorderRadius.circular(AppRadius.pill),
+                          ),
+                          child: Text(
+                            'LIVE ROUTE',
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.successDark,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    AppButton(
+                      text: 'Navigate to Next Stop (${jobs.first.reference})',
+                      icon: const Icon(
+                        Icons.navigation,
+                        color: Colors.white,
+                        size: 18,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  AppButton(
-                    text: 'Navigate to Next Stop (Stop 1)',
-                    icon: const Icon(Icons.navigation, color: Colors.white, size: 18),
-                    onPressed: () {},
-                  ),
-                ],
+                      onPressed: () {},
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
   }
 }
+

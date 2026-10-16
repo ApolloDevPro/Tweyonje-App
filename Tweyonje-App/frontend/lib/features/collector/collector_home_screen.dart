@@ -69,14 +69,18 @@ class CollectorHomeScreen extends ConsumerWidget {
                       label: active ? 'End Shift' : 'Start Shift',
                       color: active ? AppColors.danger : AppColors.primary,
                       onTap: () async {
-                        if (active) {
-                          await ref
-                              .read(collectorDashboardProvider.notifier)
-                              .endShift('current');
-                        } else {
-                          await ref
-                              .read(collectorDashboardProvider.notifier)
-                              .startShift();
+                        final notifier =
+                            ref.read(collectorDashboardProvider.notifier);
+                        final error = active
+                            ? await notifier.endShift()
+                            : await notifier.startShift();
+                        if (context.mounted && error != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(error),
+                              backgroundColor: AppColors.danger,
+                            ),
+                          );
                         }
                       },
                     ),
@@ -119,6 +123,15 @@ class CollectorHomeScreen extends ConsumerWidget {
                     text: 'View Optimal Route Map',
                     icon: const Icon(Icons.map_outlined, color: Colors.white),
                     onPressed: () => context.push('/collector-route'),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                    onPressed: () => context.push('/collector-history'),
+                    icon: const Icon(Icons.history_outlined),
+                    label: const Text('History & Earnings'),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   OutlinedButton.icon(
@@ -179,6 +192,11 @@ List<ResponsiveDestination> _destinations(BuildContext context) => [
         icon: Icons.map_outlined,
         label: 'Route Map',
         onTap: () => context.push('/collector-route'),
+      ),
+      ResponsiveDestination(
+        icon: Icons.history_outlined,
+        label: 'History',
+        onTap: () => context.push('/collector-history'),
       ),
       ResponsiveDestination(
         icon: Icons.chat_bubble_outline_rounded,

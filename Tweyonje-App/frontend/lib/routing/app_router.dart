@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/otp_verification_screen.dart';
+import '../features/auth/password_reset_screen.dart';
 import '../features/auth/register_screen.dart';
+import '../features/auth/terms_of_service_screen.dart';
 import '../features/admin/admin_analytics_screen.dart';
 import '../features/admin/admin_dashboard_screen.dart';
 import '../features/admin/admin_home_screen.dart';
@@ -17,6 +19,7 @@ import '../features/authority/authority_dashboard_screen.dart';
 import '../features/chat/chat_list_screen.dart';
 import '../features/chat/chat_screen.dart';
 import '../features/collector/collector_home_screen.dart';
+import '../features/collector/collector_history_screen.dart';
 import '../features/collector/job_detail_screen.dart';
 import '../features/collector/route_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
@@ -25,6 +28,7 @@ import '../features/profile/privacy_policy_view.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/profile/settings_screen.dart';
 import '../features/recycler/recycler_dashboard_screen.dart';
+import '../features/recycler/recycler_resources_screen.dart';
 import '../features/resident/create_request_screen.dart';
 import '../features/resident/live_tracking_screen.dart';
 import '../features/resident/my_requests_screen.dart';
@@ -45,6 +49,16 @@ import '../features/resident/waste_classification_screen.dart';
 import '../models/models.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
+
+/// Routes that unauthenticated users may visit without being bounced to login.
+const Set<String> _publicAuthRoutes = {
+  '/login',
+  '/register',
+  '/reset-password',
+  '/verify-otp',
+  '/privacy-policy',
+  '/terms-of-service',
+};
 
 /// Pure decision helper for the router redirect. Exported for unit tests.
 ///
@@ -71,8 +85,8 @@ String? onboardingRedirect({
   }
 
   if (!isAuth) {
-    if (!isLoggingIn) return '/login';
-    return null;
+    if (_publicAuthRoutes.contains(location)) return null;
+    return '/login';
   }
 
   if (isLoggingIn) return '/';
@@ -148,8 +162,23 @@ final routerProvider = Provider<GoRouter>((ref) {
           return OtpVerificationScreen(
             identifier: query['identifier'] ?? '',
             purpose: query['purpose'] ?? 'PHONE_VERIFY',
+            postRegister: query['postRegister'] == '1',
           );
         },
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (context, state) {
+          final query = state.uri.queryParameters;
+          return PasswordResetScreen(
+            email: query['email'] ?? '',
+            devToken: query['devToken'],
+          );
+        },
+      ),
+      GoRoute(
+        path: '/terms-of-service',
+        builder: (context, state) => const TermsOfServiceScreen(),
       ),
       GoRoute(
         path: '/settings',
@@ -249,6 +278,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/collector-route',
         builder: (context, state) => const RouteScreen(),
+      ),
+      GoRoute(
+        path: '/collector-history',
+        builder: (context, state) => const CollectorHistoryScreen(),
+      ),
+      GoRoute(
+        path: '/recycler/resources',
+        builder: (context, state) => const RecyclerResourcesScreen(),
       ),
       GoRoute(
         path: '/notifications',

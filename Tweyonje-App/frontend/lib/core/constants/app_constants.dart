@@ -39,6 +39,13 @@ class AppConstants {
   static const String currency = 'UGX';
   static const String countryCode = '+256';
 
+  /// Version of the Terms of Service / Privacy Policy a user consents to at
+  /// registration. Sent as `consent_policy_version` and stored on the user.
+  static const String privacyPolicyVersion = '2024-01';
+
+  /// Storage key for the email/phone remembered by the login screen.
+  static const String rememberedLoginKey = 'remembered_login_identifier';
+
   /// Pagination defaults.
   static const int defaultPageSize = 20;
 

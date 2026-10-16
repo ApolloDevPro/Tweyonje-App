@@ -378,6 +378,11 @@ class CollectorJob {
   final double? longitude;
   final double? distanceKm;
   final int? etaMinutes;
+  final double? estimatedWeightKg;
+  final String? scheduledTimeSlot;
+  final String? specialInstructions;
+  final String? requesterName;
+  final String? requesterPhone;
 
   CollectorJob({
     required this.id,
@@ -389,19 +394,47 @@ class CollectorJob {
     this.longitude,
     this.distanceKm,
     this.etaMinutes,
+    this.estimatedWeightKg,
+    this.scheduledTimeSlot,
+    this.specialInstructions,
+    this.requesterName,
+    this.requesterPhone,
   });
 
   factory CollectorJob.fromJson(Map<String, dynamic> json) {
+    final details = json['waste_request_details'] is Map
+        ? Map<String, dynamic>.from(json['waste_request_details'])
+        : const <String, dynamic>{};
+    final user = details['user_details'] is Map
+        ? Map<String, dynamic>.from(details['user_details'])
+        : const <String, dynamic>{};
     return CollectorJob(
       id: json['id']?.toString() ?? '',
-      reference: json['reference'] ?? json['reference_id'] ?? '',
+      reference: details['reference_id'] ?? json['reference'] ?? '',
       status: json['status'] ?? 'ASSIGNED',
-      address: json['address'] ?? json['pickup_address'] ?? '',
-      category: json['category'],
-      latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
-      longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
-      distanceKm: json['distance_km'] != null ? double.tryParse(json['distance_km'].toString()) : null,
-      etaMinutes: json['eta_minutes'] is int ? json['eta_minutes'] : int.tryParse(json['eta_minutes']?.toString() ?? ''),
+      address: details['pickup_address'] ?? json['address'] ?? '',
+      category: details['category_details'] is Map
+          ? details['category_details']['name']?.toString()
+          : json['category']?.toString(),
+      latitude: details['latitude'] != null
+          ? double.tryParse(details['latitude'].toString())
+          : null,
+      longitude: details['longitude'] != null
+          ? double.tryParse(details['longitude'].toString())
+          : null,
+      distanceKm: json['distance_km'] != null
+          ? double.tryParse(json['distance_km'].toString())
+          : null,
+      etaMinutes: json['eta_minutes'] is int
+          ? json['eta_minutes']
+          : int.tryParse(json['eta_minutes']?.toString() ?? ''),
+      estimatedWeightKg: details['estimated_weight_kg'] != null
+          ? double.tryParse(details['estimated_weight_kg'].toString())
+          : null,
+      scheduledTimeSlot: details['scheduled_time_slot']?.toString(),
+      specialInstructions: details['special_instructions']?.toString(),
+      requesterName: user['full_name']?.toString(),
+      requesterPhone: user['phone']?.toString(),
     );
   }
 }
@@ -411,6 +444,7 @@ class CollectorDashboardData {
   final int todayCompleted;
   final int todayPending;
   final bool activeShift;
+  final String? activeShiftId;
   final double? totalWeightCollectedKg;
   final List<CollectorJob> jobs;
 
@@ -419,20 +453,27 @@ class CollectorDashboardData {
     required this.todayCompleted,
     required this.todayPending,
     required this.activeShift,
+    this.activeShiftId,
     this.totalWeightCollectedKg,
     this.jobs = const [],
   });
 
   factory CollectorDashboardData.fromJson(Map<String, dynamic> json) {
+    final shift = json['active_shift'] is Map
+        ? Map<String, dynamic>.from(json['active_shift'])
+        : null;
     return CollectorDashboardData(
-      todayTotal: json['today_total'] ?? 0,
-      todayCompleted: json['today_completed'] ?? 0,
-      todayPending: json['today_pending'] ?? 0,
-      activeShift: json['active_shift'] ?? false,
+      todayTotal: json['today_total_jobs'] ?? json['today_total'] ?? 0,
+      todayCompleted: json['completed_today'] ?? json['today_completed'] ?? 0,
+      todayPending: json['pending_jobs_count'] ?? json['today_pending'] ?? 0,
+      activeShift: shift != null || json['active_shift'] == true,
+      activeShiftId: shift?['id']?.toString(),
       totalWeightCollectedKg: json['total_weight_collected_kg'] != null
           ? double.tryParse(json['total_weight_collected_kg'].toString())
           : null,
-      jobs: (json['jobs'] as List? ?? []).map((j) => CollectorJob.fromJson(j)).toList(),
+      jobs: (json['active_assignments'] as List? ?? json['jobs'] as List? ?? [])
+          .map((j) => CollectorJob.fromJson(Map<String, dynamic>.from(j)))
+          .toList(),
     );
   }
 }
@@ -1134,8 +1175,8 @@ class LiveLocation {
       longitude: double.tryParse(loc['longitude']?.toString() ?? '0') ?? 0.0,
       distanceKm: json['distance_km'] != null ? double.tryParse(json['distance_km'].toString()) : null,
       etaMinutes: json['eta_minutes'] is int ? json['eta_minutes'] : int.tryParse(json['eta_minutes']?.toString() ?? ''),
-      status: json['status'],
-      lastUpdated: json['last_updated'],
+      status: json['status'] ?? loc['status'],
+      lastUpdated: loc['last_updated'] ?? json['last_updated'],
     );
   }
 }

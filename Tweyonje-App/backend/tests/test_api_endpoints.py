@@ -1,5 +1,7 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -7,6 +9,7 @@ from core.models import Role, Zone
 from apps.waste_requests.models import WasteCategory, WasteRequest
 from apps.rewards.models import RewardTier, EcoWallet
 from apps.recycling.models import RecyclableMaterial
+from apps.notifications.models import NotificationDevice
 
 User = get_user_model()
 
@@ -63,6 +66,8 @@ class TweyonjeAPITestCase(APITestCase):
         self.assertEqual(response.json().get("status"), "ok")
 
     def test_auth_register_and_login(self):
+        self.assertNotIn("core.middleware.SupabaseAuthMiddleware", settings.MIDDLEWARE)
+
         # Register
         register_url = "/api/v1/auth/register/"
         data = {
@@ -86,6 +91,16 @@ class TweyonjeAPITestCase(APITestCase):
         self.assertIn("access", login_resp.data)
         self.assertIn("refresh", login_resp.data)
 
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {login_resp.data['access']}"
+        )
+        me_resp = self.client.get("/api/v1/auth/me/")
+        self.assertEqual(me_resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(me_resp.data["email"], "newuser@tweyonje.ug")
+
+        requests_resp = self.client.get("/api/v1/waste-requests/")
+        self.assertEqual(requests_resp.status_code, status.HTTP_200_OK)
+
     def test_profile_endpoints(self):
         self.client.force_authenticate(user=self.resident)
         profile_url = "/api/v1/profiles/me/"
@@ -105,16 +120,58 @@ class TweyonjeAPITestCase(APITestCase):
         req_data = {
             "category": str(self.category.id),
             "estimated_weight_kg": 15.5,
+            "estimated_price": 1,
             "pickup_address": "Plot 12 Kampala Rd",
             "latitude": 0.3136,
             "longitude": 32.5811,
-            "scheduled_date": "2026-08-20",
+            "scheduled_date": (timezone.localdate() + timezone.timedelta(days=1)).isoformat(),
             "scheduled_time_slot": "09:00 - 11:00",
             "special_instructions": "Please ring bell",
         }
         create_resp = self.client.post("/api/v1/waste-requests/", req_data)
         self.assertEqual(create_resp.status_code, status.HTTP_201_CREATED)
         self.assertEqual(create_resp.data.get("status"), "PENDING")
+        self.assertEqual(str(create_resp.data.get("estimated_price")), "7750.00")
+
+    def test_waste_request_rejects_a_pickup_date_in_the_past(self):
+        self.client.force_authenticate(user=self.resident)
+        response = self.client.post(
+            "/api/v1/waste-requests/",
+            {
+                "category": str(self.category.id),
+                "estimated_weight_kg": 2,
+                "pickup_address": "Plot 12 Kampala Rd",
+                "scheduled_date": (timezone.localdate() - timezone.timedelta(days=1)).isoformat(),
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("scheduled_date", response.data)
+
+    def test_push_device_registration_is_idempotent_and_can_be_disabled(self):
+        self.client.force_authenticate(user=self.resident)
+        url = "/api/v1/notifications/register_device/"
+        payload = {"token": "fcm-test-token", "device_type": "mobile"}
+
+        first_response = self.client.post(url, payload)
+        second_response = self.client.post(url, payload)
+
+        self.assertEqual(first_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            NotificationDevice.objects.filter(user=self.resident, token="fcm-test-token").count(),
+            1,
+        )
+
+        disable_response = self.client.post(
+            "/api/v1/notifications/unregister_device/",
+            {"token": "fcm-test-token"},
+        )
+
+        self.assertEqual(disable_response.status_code, status.HTTP_200_OK)
+        self.assertFalse(
+            NotificationDevice.objects.get(user=self.resident, token="fcm-test-token").is_active
+        )
 
     def test_collector_flow(self):
         # Create request by resident

@@ -32,27 +32,41 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
   }
 
   Future<void> _advanceStatus() async {
-    String nextStatus;
+    final notifier = ref.read(collectorDashboardProvider.notifier);
+    setState(() => _isUpdating = true);
+
+    String? error;
+    String? nextStatus;
     if (_status == 'ASSIGNED') {
       nextStatus = 'EN_ROUTE';
+      error = await notifier.startTrip(widget.jobId);
     } else if (_status == 'EN_ROUTE') {
       nextStatus = 'ARRIVED';
+      error = await notifier.arrive(widget.jobId);
     } else if (_status == 'ARRIVED') {
       nextStatus = 'COLLECTED';
-    } else {
-      return;
+      final weight = double.tryParse(_weightController.text.trim());
+      error = await notifier.complete(
+        widget.jobId,
+        collectedWeightKg: weight,
+      );
     }
 
-    setState(() => _isUpdating = true);
-    final success = await ref.read(collectorDashboardProvider.notifier).updateStatus(widget.jobId, nextStatus);
     setState(() => _isUpdating = false);
 
-    if (success) {
-      setState(() => _status = nextStatus);
-      if (nextStatus == 'COLLECTED' && mounted) {
+    if (!mounted) return;
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), backgroundColor: AppColors.danger),
+      );
+      return;
+    }
+    if (nextStatus != null) {
+      setState(() => _status = nextStatus!);
+      if (nextStatus == 'COLLECTED') {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Job Completed and Marked Collected!'),
+            content: Text('Job completed and marked collected!'),
             backgroundColor: AppColors.success,
           ),
         );

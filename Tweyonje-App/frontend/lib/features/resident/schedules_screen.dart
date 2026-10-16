@@ -71,9 +71,19 @@ class _SchedulesScreenState extends ConsumerState<SchedulesScreen> {
                         children: scheduleState.schedules.map((schedule) {
                           return _ScheduleCard(
                             schedule: schedule,
-                            onToggle: () => ref
-                                .read(scheduleProvider.notifier)
-                                .toggle(schedule.id),
+                            onToggle: () async {
+                              final error = await ref
+                                  .read(scheduleProvider.notifier)
+                                  .toggle(schedule.id);
+                              if (error != null && context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(error),
+                                    backgroundColor: AppColors.danger,
+                                  ),
+                                );
+                              }
+                            },
                           );
                         }).toList(),
                       ),

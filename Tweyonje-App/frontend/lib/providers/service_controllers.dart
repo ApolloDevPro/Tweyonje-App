@@ -111,9 +111,12 @@ class ScheduleController extends StateNotifier<ScheduleState> {
     }
   }
 
-  Future<bool> toggle(String id) async {
+  Future<String?> toggle(String id) async {
+    final current = state.schedules.where((s) => s.id == id).firstOrNull;
+    if (current == null) return 'Schedule not found.';
+    final next = !current.isActive;
     try {
-      await _api.toggleSchedule(id);
+      await _api.toggleSchedule(id, isActive: next);
       state = state.copyWith(
         schedules: state.schedules.map((s) {
           if (s.id == id) {
@@ -128,7 +131,7 @@ class ScheduleController extends StateNotifier<ScheduleState> {
               latitude: s.latitude,
               longitude: s.longitude,
               zone: s.zone,
-              isActive: !s.isActive,
+              isActive: next,
               nextRun: s.nextRun,
               createdAt: s.createdAt,
             );
@@ -136,9 +139,9 @@ class ScheduleController extends StateNotifier<ScheduleState> {
           return s;
         }).toList(),
       );
-      return true;
-    } catch (_) {
-      return false;
+      return null;
+    } catch (e) {
+      return _errorMessage(e);
     }
   }
 }
@@ -683,6 +686,7 @@ class TrackingState {
 class TrackingController extends StateNotifier<TrackingState> {
   final ApiClient _api;
   final String requestId;
+  String? _assignmentId;
   Timer? _timer;
 
   TrackingController(this._api, this.requestId) : super(const TrackingState());
@@ -696,7 +700,16 @@ class TrackingController extends StateNotifier<TrackingState> {
   Future<void> fetch({bool silent = false}) async {
     if (!silent) state = state.copyWith(isLoading: true);
     try {
-      final res = await _api.getCollectorLiveLocation(requestId);
+      _assignmentId ??= await _resolveAssignmentId();
+      final assignmentId = _assignmentId;
+      if (assignmentId == null) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'No collector has been assigned to this pickup yet.',
+        );
+        return;
+      }
+      final res = await _api.getCollectorLiveLocation(assignmentId);
       if (res.statusCode == 200 && res.data is Map) {
         state = state.copyWith(
           location: LiveLocation.fromJson(Map<String, dynamic>.from(res.data)),
@@ -706,8 +719,31 @@ class TrackingController extends StateNotifier<TrackingState> {
         );
         return;
       }
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Collector live location is currently unavailable.',
+      );
+      return;
     } catch (_) {}
     if (!silent) state = state.copyWith(isLoading: false);
+  }
+
+  /// Backend tracking expects an assignment UUID; residents navigate here
+  /// with a waste-request ID. Resolve the first assignment for this request.
+  Future<String?> _resolveAssignmentId() async {
+    try {
+      final res = await _api.getAssignments();
+      if (res.statusCode == 200) {
+        final List results =
+            res.data is List ? res.data : (res.data['results'] ?? []);
+        for (final item in results) {
+          if (item is Map && item['waste_request']?.toString() == requestId) {
+            return item['id']?.toString();
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 
   @override
@@ -787,10 +823,14 @@ class AnalyticsController extends StateNotifier<AnalyticsState> {
       try {
         final hotspotRes = await _api.getAnalyticsHotspots();
         if (hotspotRes.statusCode == 200 &&
-            (hotspotRes.data is List || hotspotRes.data['results'] is List)) {
+            (hotspotRes.data is List ||
+                hotspotRes.data['results'] is List ||
+                hotspotRes.data['hotspots'] is List)) {
           final List results = hotspotRes.data is List
               ? hotspotRes.data
-              : hotspotRes.data['results'];
+              : (hotspotRes.data['hotspots'] is List
+                  ? hotspotRes.data['hotspots']
+                  : hotspotRes.data['results']);
           hotspots = results
               .map((h) =>
                   AnalyticsHotspot.fromJson(Map<String, dynamic>.from(h)))

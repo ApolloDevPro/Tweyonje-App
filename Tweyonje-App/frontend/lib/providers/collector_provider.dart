@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/services/api_client.dart';
 import '../models/models.dart';
@@ -23,37 +24,65 @@ class CollectorDashboardNotifier extends StateNotifier<AsyncValue<CollectorDashb
     }
   }
 
-  Future<bool> startShift() async {
+  Future<String?> _errorMessage(Future<Response> Function() call) async {
     try {
-      final res = await _api.startShift();
+      final res = await call();
       if (res.statusCode == 200 || res.statusCode == 201) {
         await fetchDashboard();
-        return true;
+        return null;
       }
-    } catch (_) {}
-    return false;
+      final data = res.data;
+      if (data is Map && data['error'] is String) return data['error'];
+      if (data is Map && data['detail'] is String) return data['detail'];
+      return 'Action failed. Please try again.';
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['error'] is String) return data['error'];
+      if (data is Map && data['detail'] is String) return data['detail'];
+      return 'Network error. Please try again.';
+    } catch (_) {
+      return 'Something went wrong. Please try again.';
+    }
   }
 
-  Future<bool> endShift(String shiftId) async {
-    try {
-      final res = await _api.endShift(shiftId);
-      if (res.statusCode == 200) {
-        await fetchDashboard();
-        return true;
-      }
-    } catch (_) {}
-    return false;
+  /// Starts a shift. Returns an error message, or null on success.
+  Future<String?> startShift() {
+    return _errorMessage(_api.startShift);
   }
 
-  Future<bool> updateStatus(String assignmentId, String status) async {
-    try {
-      final res = await _api.updateAssignmentStatus(assignmentId, status);
-      if (res.statusCode == 200) {
-        await fetchDashboard();
-        return true;
-      }
-    } catch (_) {}
-    return false;
+  /// Ends the currently active shift. Returns an error message, or null on success.
+  Future<String?> endShift() async {
+    final shiftId = state.valueOrNull?.activeShiftId;
+    if (shiftId == null || shiftId.isEmpty) {
+      return 'No active shift found.';
+    }
+    return _errorMessage(() => _api.endShift(shiftId));
+  }
+
+  Future<String?> startTrip(String assignmentId) {
+    return _errorMessage(() => _api.assignmentStartTrip(assignmentId));
+  }
+
+  Future<String?> arrive(String assignmentId) {
+    return _errorMessage(() => _api.assignmentArrive(assignmentId));
+  }
+
+  Future<String?> complete(
+    String assignmentId, {
+    double? collectedWeightKg,
+    String? notes,
+  }) {
+    return _errorMessage(
+      () => _api.assignmentComplete(
+        assignmentId,
+        collectedWeightKg: collectedWeightKg,
+        notes: notes,
+      ),
+    );
+  }
+
+  Future<String?> reject(String assignmentId, {String? reason}) {
+    return _errorMessage(() => _api.assignmentReject(assignmentId, reason: reason));
   }
 }
 

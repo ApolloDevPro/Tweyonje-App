@@ -201,7 +201,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen>
                     const SizedBox(width: AppSpacing.lg),
                     Expanded(
                       child: Text(
-                        context.tr('tracking.noLocation'),
+                        state.error ?? context.tr('tracking.noLocation'),
                         style: AppTypography.body,
                       ),
                     ),

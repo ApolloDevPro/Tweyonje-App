@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
 import '../../core/services/api_client.dart';
 import '../../core/theme/theme.dart';
 import '../../models/models.dart';
@@ -19,12 +20,14 @@ class RequestDetailScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<RequestDetailScreen> createState() => _RequestDetailScreenState();
+  ConsumerState<RequestDetailScreen> createState() =>
+      _RequestDetailScreenState();
 }
 
 class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
   WasteRequest? _request;
   bool _isLoading = false;
+  String? _loadError;
 
   @override
   void initState() {
@@ -36,25 +39,78 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
   }
 
   Future<void> _loadRequest() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
     try {
-      final res = await ref.read(apiClientProvider).getRequestDetail(widget.requestId);
+      final res = await ref
+          .read(apiClientProvider)
+          .getRequestDetail(widget.requestId);
       if (res.statusCode == 200 && mounted) {
         setState(() {
           _request = WasteRequest.fromJson(res.data);
         });
       }
-    } catch (_) {}
-    if (mounted) setState(() => _isLoading = false);
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _loadError = _requestErrorMessage(
+            error,
+            fallback: 'Could not load this pickup request.',
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  String _requestErrorMessage(Object error, {required String fallback}) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map) {
+        final detail = data['detail'];
+        if (detail is String && detail.isNotEmpty) return detail;
+        for (final value in data.values) {
+          if (value is List && value.isNotEmpty) return value.first.toString();
+        }
+      }
+      if (error.response == null) {
+        return 'Could not connect to the service. Check your connection and try again.';
+      }
+    }
+    return '$fallback $error';
   }
 
   @override
   Widget build(BuildContext context) {
     final req = _request;
-    if (req == null || _isLoading) {
+    if (_isLoading) {
       return Scaffold(
         appBar: AppBar(title: const Text('Request Details')),
         body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (req == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Request Details')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(_loadError ?? 'Pickup request details are unavailable.'),
+                const SizedBox(height: AppSpacing.md),
+                ElevatedButton(
+                  onPressed: _loadRequest,
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
@@ -62,12 +118,13 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(req.referenceId.isNotEmpty ? req.referenceId : 'Request #${req.id.substring(0, 6)}'),
+        title: Text(
+          req.referenceId.isNotEmpty
+              ? req.referenceId
+              : 'Request #${req.id.substring(0, 6)}',
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
         ],
       ),
       body: SingleChildScrollView(
@@ -84,7 +141,9 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                     children: [
                       Text(
                         req.categoryDetails?.name ?? 'Waste Collection',
-                        style: AppTypography.h4.copyWith(fontWeight: FontWeight.w700),
+                        style: AppTypography.h4.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       StatusBadge(status: req.status),
                     ],
@@ -93,7 +152,10 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                   const Divider(),
                   const SizedBox(height: 12),
                   _buildDetailRow('Weight', '${req.estimatedWeightKg} kg'),
-                  _buildDetailRow('Estimated Fee', 'UGX ${req.estimatedPrice.toStringAsFixed(0)}'),
+                  _buildDetailRow(
+                    'Estimated Fee',
+                    'UGX ${req.estimatedPrice.toStringAsFixed(0)}',
+                  ),
                   _buildDetailRow('Payment Status', req.paymentStatus),
                   if (req.scheduledTimeSlot != null)
                     _buildDetailRow('Scheduled Window', req.scheduledTimeSlot!),
@@ -122,10 +184,7 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                req.pickupAddress,
-                style: AppTypography.bodySmall,
-              ),
+              Text(req.pickupAddress, style: AppTypography.bodySmall),
               const SizedBox(height: AppSpacing.lg),
             ],
 
@@ -146,9 +205,14 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                         children: [
                           Text(
                             req.assignedCollectorName!,
-                            style: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w700),
+                            style: AppTypography.labelLarge.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                          Text('Assigned Collector', style: AppTypography.caption),
+                          Text(
+                            'Assigned Collector',
+                            style: AppTypography.caption,
+                          ),
                         ],
                       ),
                     ),
@@ -173,7 +237,10 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () => _openChatWithCollector(req.id),
-                      icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                      icon: const Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        size: 18,
+                      ),
                       label: const Text('Chat'),
                     ),
                   ),
@@ -199,7 +266,9 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                   children: [
                     Text(
                       'Payment Due',
-                      style: AppTypography.caption.copyWith(color: AppColors.primaryDark),
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.primaryDark,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -235,17 +304,44 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                     context: context,
                     builder: (ctx) => AlertDialog(
                       title: const Text('Cancel Request?'),
-                      content: const Text('Are you sure you want to cancel this pickup request?'),
+                      content: const Text(
+                        'Are you sure you want to cancel this pickup request?',
+                      ),
                       actions: [
-                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
-                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes, Cancel')),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('No'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Yes, Cancel'),
+                        ),
                       ],
                     ),
                   );
                   if (confirmed == true) {
-                    await ref.read(wasteRequestsProvider.notifier).cancelRequest(req.id, 'Resident cancelled');
-                    if (mounted && context.mounted) {
-                      context.pop();
+                    try {
+                      final cancelled = await ref
+                          .read(wasteRequestsProvider.notifier)
+                          .cancelRequest(req.id, 'Resident cancelled');
+                      if (cancelled && mounted && context.mounted) {
+                        context.pop();
+                      }
+                    } catch (error) {
+                      if (mounted && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              _requestErrorMessage(
+                                error,
+                                fallback:
+                                    'Could not cancel this pickup request.',
+                              ),
+                            ),
+                            backgroundColor: AppColors.danger,
+                          ),
+                        );
+                      }
                     }
                   }
                 },
@@ -277,8 +373,16 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
-          Text(value, style: AppTypography.body.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          Text(
+            value,
+            style: AppTypography.body.copyWith(fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );
@@ -350,7 +454,9 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                 const SizedBox(height: 8),
                 Text(
                   errorMessage!,
-                  style: AppTypography.caption.copyWith(color: AppColors.danger),
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.danger,
+                  ),
                 ),
               ],
               const SizedBox(height: AppSpacing.xl),
@@ -364,7 +470,10 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                     : () async {
                         final phone = phoneController.text.trim();
                         if (phone.isEmpty && method != 'CARD') {
-                          setModalState(() => errorMessage = 'Please enter a valid phone number');
+                          setModalState(
+                            () => errorMessage =
+                                'Please enter a valid phone number',
+                          );
                           return;
                         }
                         setModalState(() {
@@ -374,12 +483,16 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
 
                         final messenger = ScaffoldMessenger.of(context);
                         try {
-                          final res = await ref.read(apiClientProvider).initiatePayment(
-                            wasteRequestId: request.id,
-                            phoneNumber: phone.isNotEmpty ? phone : '+256700000000',
-                            method: method,
-                            amount: request.estimatedPrice,
-                          );
+                          final res = await ref
+                              .read(apiClientProvider)
+                              .initiatePayment(
+                                wasteRequestId: request.id,
+                                phoneNumber: phone.isNotEmpty
+                                    ? phone
+                                    : '+256700000000',
+                                method: method,
+                                amount: request.estimatedPrice,
+                              );
 
                           if (ctx.mounted) {
                             Navigator.pop(ctx);
@@ -396,12 +509,15 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                           );
                           if (mounted) {
                             await _loadRequest();
-                            ref.read(wasteRequestsProvider.notifier).fetchRequests();
+                            ref
+                                .read(wasteRequestsProvider.notifier)
+                                .fetchRequests();
                           }
                         } catch (e) {
                           setModalState(() {
                             isProcessing = false;
-                            errorMessage = 'Payment request failed. Please try again.';
+                            errorMessage =
+                                'Payment request failed. Please try again.';
                           });
                         }
                       },

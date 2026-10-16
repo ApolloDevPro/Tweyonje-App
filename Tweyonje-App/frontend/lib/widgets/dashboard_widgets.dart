@@ -9,15 +9,21 @@ import '../core/theme/theme.dart';
     case 'PAID':
     case 'SUCCESSFUL':
     case 'ACCEPTED':
+    case 'SOLD':
+    case 'VERIFIED':
       return (AppColors.success, Icons.check_circle_rounded);
     case 'IN_PROGRESS':
     case 'EN_ROUTE':
     case 'ASSIGNED':
     case 'SCHEDULED':
+    case 'ARRIVED':
       return (AppColors.info, Icons.local_shipping_rounded);
     case 'PENDING':
     case 'UNPAID':
+    case 'RESERVED':
       return (AppColors.warning, Icons.schedule_rounded);
+    case 'AVAILABLE':
+      return (AppColors.primary, Icons.sell_outlined);
     case 'CANCELLED':
     case 'REJECTED':
     case 'DECLINED':

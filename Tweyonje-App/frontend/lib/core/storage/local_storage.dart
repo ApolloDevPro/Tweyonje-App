@@ -128,4 +128,21 @@ class LocalStorage {
     await init();
     return _prefs?.getString(AppConstants.languageKey);
   }
+
+  // ── Generic string preferences (e.g. remembered login identifier) ──
+
+  Future<void> setPreferenceString(String key, String value) async {
+    await init();
+    await _prefs?.setString(key, value);
+  }
+
+  Future<String?> getPreferenceString(String key) async {
+    await init();
+    return _prefs?.getString(key);
+  }
+
+  Future<void> removePreference(String key) async {
+    await init();
+    await _prefs?.remove(key);
+  }
 }

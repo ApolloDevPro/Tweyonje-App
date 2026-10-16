@@ -1,5 +1,7 @@
 import random
 import string
+from decimal import Decimal
+
 from django.conf import settings
 from django.db import models
 
@@ -96,9 +98,9 @@ class WasteRequest(UUIDModel):
 
     def save(self, *args, **kwargs):
         if not self.estimated_price and self.category:
-            self.estimated_price = float(self.estimated_weight_kg) * float(self.category.default_price_per_kg)
+            self.estimated_price = self.estimated_weight_kg * self.category.default_price_per_kg
             if self.is_emergency:
-                self.estimated_price *= 1.5
+                self.estimated_price *= Decimal("1.5")
         super().save(*args, **kwargs)
 
     def __str__(self):

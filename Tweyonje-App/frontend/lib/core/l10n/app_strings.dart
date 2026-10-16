@@ -584,6 +584,321 @@ class AppStrings {
       'lg': 'Yingira wamu n’abakunganyizi n’ebitundu ebikola okukunganya awamu aba omuwangufu.',
       'sw': 'Jiunge na watoaji na jamii zinazorahisisha usimamizi wa taka.',
     },
+
+    // ── Auth: Login ──
+    'auth.signIn': {
+      'en': 'Sign In',
+      'lg': 'Yingira',
+      'sw': 'Ingia',
+    },
+    'auth.signInSubtitle': {
+      'en': 'Access your pickups, earnings, and eco-points',
+      'lg': 'Funa ebyokukunganya byo, eby’okuwumulwa, n’eppoin ntali zo',
+      'sw': 'Pata uchukuaji wako, mapato, na alama za mazingira',
+    },
+    'auth.signInButton': {
+      'en': 'Sign In to Tweyonje',
+      'lg': 'Yingira mu Tweyonje',
+      'sw': 'Ingia kwenye Tweyonje',
+    },
+    'auth.emailOrPhone': {
+      'en': 'Email or Phone Number',
+      'lg': 'Email oba Ennamba ya Essimu',
+      'sw': 'Barua pepe au Namba ya Simu',
+    },
+    'auth.emailOrPhoneHint': {
+      'en': 'e.g. resident@tweyonje.ug or +256704567936',
+      'lg': 'okuge. resident@tweyonje.ug oba +256704567936',
+      'sw': 'mfano resident@tweyonje.ug au +256704567936',
+    },
+    'auth.emailOrPhoneRequired': {
+      'en': 'Please enter your email or phone',
+      'lg': 'Teeka email yo oba ennamba ya essimu yo',
+      'sw': 'Tafadhali weka barua pepe yako au namba ya simu',
+    },
+    'auth.emailOrPhoneInvalid': {
+      'en': 'Enter a valid email or Ugandan phone number',
+      'lg': 'Teeka email oba ennamba ya essimu ey’Uganda eyangu',
+      'sw': 'Weka barua pepe sahihi au namba ya simu ya Uganda',
+    },
+    'auth.password': {
+      'en': 'Password',
+      'lg': 'Ekisumuluzo',
+      'sw': 'Nenosiri',
+    },
+    'auth.passwordRequired': {
+      'en': 'Please enter your password',
+      'lg': 'Teeka ekisumuluzo kyo',
+      'sw': 'Tafadhali weka nenosiri lako',
+    },
+    'auth.rememberMe': {
+      'en': 'Remember me',
+      'lg': 'Njukira',
+      'sw': 'Nikumbuke',
+    },
+    'auth.forgotPassword': {
+      'en': 'Forgot Password?',
+      'lg': 'Weyongedde ekisumuluzo?',
+      'sw': 'Umesahau nenosiri?',
+    },
+    'auth.biometricSignIn': {
+      'en': 'Biometric Sign In',
+      'lg': 'Yingira nga ttumya ebifaananyi by’omukono',
+      'sw': 'Ingia kwa vitambulisho vya mwili',
+    },
+    'auth.noAccount': {
+      'en': "Don't have an account?",
+      'lg': 'Tokozzeeko akaawunti?',
+      'sw': 'Huna akaunti?',
+    },
+    'auth.createAccount': {
+      'en': 'Create Account',
+      'lg': 'Kuwa Akaawunti',
+      'sw': 'Fungua Akaunti',
+    },
+
+    // ── Auth: Register ──
+    'auth.joinTweyonje': {
+      'en': 'Join Tweyonje',
+      'lg': 'Yingira mu Tweyonje',
+      'sw': 'Jiunge na Tweyonje',
+    },
+    'auth.createYourAccount': {
+      'en': 'Create Your Account',
+      'lg': 'Kuwa Akaawunti Yo',
+      'sw': 'Fungua Akaunti Yako',
+    },
+    'auth.registeringAs': {
+      'en': 'I AM REGISTERING AS:',
+      'lg': 'NNYINZA OKUWANDIKA NGA:',
+      'sw': 'NAJISAJILI KAMA:',
+    },
+    'auth.fullName': {
+      'en': 'Full Name',
+      'lg': 'Erinnya Lyonna',
+      'sw': 'Jina Kamili',
+    },
+    'auth.fullNameRequired': {
+      'en': 'Please enter your full name',
+      'lg': 'Teeka erinnya lyonna',
+      'sw': 'Tafadhali weka jina lako kamili',
+    },
+    'auth.email': {
+      'en': 'Email Address',
+      'lg': 'Addiresi ya Email',
+      'sw': 'Anwani ya Barua Pepe',
+    },
+    'auth.emailRequired': {
+      'en': 'Email is required',
+      'lg': 'Email y’okukola',
+      'sw': 'Barua pepe inahitajika',
+    },
+    'auth.emailInvalid': {
+      'en': 'Please enter a valid email address',
+      'lg': 'Teeka email eyangu',
+      'sw': 'Tafadhali weka barua pepe sahihi',
+    },
+    'auth.phone': {
+      'en': 'Phone Number (Mobile Money)',
+      'lg': 'Ennamba ya Essimu (Mobile Money)',
+      'sw': 'Namba ya Simu (M-Pesa)',
+    },
+    'auth.phoneHint': {
+      'en': 'e.g. 0704 567 936',
+      'lg': 'okuge. 0704 567 936',
+      'sw': 'mfano 0704 567 936',
+    },
+    'auth.phoneInvalid': {
+      'en': 'Enter a valid Ugandan phone number',
+      'lg': 'Teeka ennamba ya essimu ey’Uganda eyangu',
+      'sw': 'Weka namba ya simu sahihi ya Uganda',
+    },
+    'auth.passwordHint': {
+      'en': 'At least 8 characters',
+      'lg': 'Ebibuuzo 8 oba nnyingi',
+      'sw': 'Herufi 8 au zaidi',
+    },
+    'auth.confirmPassword': {
+      'en': 'Confirm Password',
+      'lg': 'Kakasa Ekisumuluzo',
+      'sw': 'Thibitisha Nenosiri',
+    },
+    'auth.passwordsNoMatch': {
+      'en': 'Passwords do not match',
+      'lg': 'Ebisumuluzo tebifanana',
+      'sw': 'Menosiri hayalingani',
+    },
+    'auth.agreeTermsPrefix': {
+      'en': 'I agree to the ',
+      'lg': 'Nkubiriza ku ',
+      'sw': 'Nakubaliana na ',
+    },
+    'auth.termsOfService': {
+      'en': 'Terms of Service',
+      'lg': 'Ebikwata ku Kola',
+      'sw': 'Masharti ya Huduma',
+    },
+    'auth.and': {
+      'en': ' & ',
+      'lg': ' ne ',
+      'sw': ' na ',
+    },
+    'auth.privacyPolicy': {
+      'en': 'Privacy Policy',
+      'lg': 'Ebyuma by’Ebikubo',
+      'sw': 'Sera za Faragha',
+    },
+    'auth.agreeTermsSuffix': {
+      'en': '',
+      'lg': '',
+      'sw': '',
+    },
+    'auth.acceptTerms': {
+      'en': 'Please accept the Terms of Service to continue',
+      'lg': 'Kakasa ebikwata ku kola oluvannyuma olwokugenda munda',
+      'sw': 'Tafadhali kubaliana na Masharti ya Huduma ili kuendelea',
+    },
+    'auth.createMyAccount': {
+      'en': 'Create My Account',
+      'lg': 'Kuwa Akaawunti Yange',
+      'sw': 'Fungua Akaunti Yangu',
+    },
+    'auth.haveAccount': {
+      'en': 'Already have an account?',
+      'lg': 'Ozzeddemu akaawunti?',
+      'sw': 'Tayari una akaunti?',
+    },
+
+    // ── Auth: OTP ──
+    'auth.verifyAccount': {
+      'en': 'Verify your account',
+      'lg': 'Kakasa akaawunti yo',
+      'sw': 'Thibitisha akaunti yako',
+    },
+    'auth.otpSentTo': {
+      'en': 'We sent a verification code to',
+      'lg': 'Tutadde ko ekifaananyi ekikakasa eri',
+      'sw': 'Tumeshahi msimbo wa uthibitisho kwa',
+    },
+    'auth.enterOtp': {
+      'en': 'Enter the code you received.',
+      'lg': 'Teeka ekifaananyi ekyakaggyewo.',
+      'sw': 'Weka msimbo uliopokea.',
+    },
+    'auth.verifyCode': {
+      'en': 'Verify Code',
+      'lg': 'Kakasa Ekifaananyi',
+      'sw': 'Thibitisha Msimbo',
+    },
+    'auth.resendCode': {
+      'en': 'Resend code',
+      'lg': 'Ddamu otumeko ekifaananyi',
+      'sw': 'Tuma msimbo tena',
+    },
+    'auth.resendIn': {
+      'en': 'Resend code in',
+      'lg': 'Ddamu otumeko ekifaananyi mu',
+      'sw': 'Tuma msimbo tena baada ya',
+    },
+    'auth.seconds': {
+      'en': 's',
+      'lg': 's',
+      'sw': 's',
+    },
+    'auth.skip': {
+      'en': 'Skip',
+      'lg': 'Sambako',
+      'sw': 'Ruka',
+    },
+    'auth.verified': {
+      'en': 'Your account is now verified.',
+      'lg': 'Akaawunti yo kaakakaziddwa.',
+      'sw': 'Akaunti yako sasa imethibitishwa.',
+    },
+    'auth.devCodeLabel': {
+      'en': 'Dev code',
+      'lg': 'Ekifaananyi ey’omu nkola',
+      'sw': 'Msimbo wa majaribio',
+    },
+
+    // ── Auth: Password reset ──
+    'auth.resetPassword': {
+      'en': 'Reset Password',
+      'lg': 'Zzaako Ekisumuluzo',
+      'sw': 'Weka Upya Nenosiri',
+    },
+    'auth.resetPasswordSubtitle': {
+      'en': 'Enter your registered email address and we will send you a reset code.',
+      'lg': 'Teeka email yo eya ku ntapu era tukutumeko ekifaananyi ekizzaako.',
+      'sw': 'Weka barua pepe yako iliyosajiliwa na tutakutumia msimbo wa kuiweka upya.',
+    },
+    'auth.sendResetCode': {
+      'en': 'Send Reset Code',
+      'lg': 'Tumeko Ekifaananyi',
+      'sw': 'Tuma Msimbo wa Kuweka Upya',
+    },
+    'auth.resetEmailLabel': {
+      'en': 'Email Address',
+      'lg': 'Addiresi ya Email',
+      'sw': 'Anwani ya Barua Pepe',
+    },
+    'auth.resetEmailRequired': {
+      'en': 'Please enter a valid email address',
+      'lg': 'Teeka email eyangu',
+      'sw': 'Tafadhali weka barua pepe sahihi',
+    },
+    'auth.resetCodeLabel': {
+      'en': 'Reset Code',
+      'lg': 'Ekifaananyi',
+      'sw': 'Msimbo wa Kuweka Upya',
+    },
+    'auth.resetCodeRequired': {
+      'en': 'Please enter the reset code',
+      'lg': 'Teeka ekifaananyi ekizzaako',
+      'sw': 'Tafadhali weka msimbo wa kuweka upya',
+    },
+    'auth.newPassword': {
+      'en': 'New Password',
+      'lg': 'Ekisumuluzo Ekiggya',
+      'sw': 'Nenosiri Jipya',
+    },
+    'auth.newPasswordRequired': {
+      'en': 'New password must be at least 8 characters',
+      'lg': 'Ekisumuluzo ekiggya kiyinza okuba ebibuuzo 8 oba nnyingi',
+      'sw': 'Nenosiri jipya lazima liwe na herufi 8 au zaidi',
+    },
+    'auth.confirmNewPassword': {
+      'en': 'Confirm New Password',
+      'lg': 'Kakasa Ekisumuluzo Ekiggya',
+      'sw': 'Thibitisha Nenosiri Jipya',
+    },
+    'auth.updatePassword': {
+      'en': 'Update Password',
+      'lg': 'Kyawulo Ekisumuluzo',
+      'sw': 'Sasisha Nenosiri',
+    },
+    'auth.resetSuccess': {
+      'en': 'Password updated. You can now sign in.',
+      'lg': 'Ekisumuluzo kikyusiddwa. Osaana okuyingira.',
+      'sw': 'Nenosiri imesasishwa. Sasa unaweza kuingia.',
+    },
+    'auth.resetSent': {
+      'en': 'If that email is registered, a reset code has been sent.',
+      'lg': 'Bwe email eyo eya ku ntapu, ekifaananyi kizzeeko.',
+      'sw': 'Ikiwa barua pepe hiyo imesajiliwa, msimbo umetumwa.',
+    },
+
+    // ── Auth: errors ──
+    'auth.loginFailed': {
+      'en': 'Login failed. Please check your credentials.',
+      'lg': 'Okuyingira kulemereddwa. Kebera ebizibu byo.',
+      'sw': 'Kuingia kumeshindwa. Tafadhali angalia taarifa zako.',
+    },
+    'auth.registerFailed': {
+      'en': 'Registration failed. Please check your information.',
+      'lg': 'Okuwandika kulemereddwa. Kebera ebifa ku ntapu.',
+      'sw': 'Usajili umeshindwa. Tafadhali angalia taarifa zako.',
+    },
   };
 
   static String tr(String key, String lang) {

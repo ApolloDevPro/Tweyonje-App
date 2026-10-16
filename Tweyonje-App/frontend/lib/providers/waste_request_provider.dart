@@ -4,14 +4,9 @@ import '../models/models.dart';
 
 final wasteCategoriesProvider = FutureProvider<List<WasteCategory>>((ref) async {
   final api = ref.watch(apiClientProvider);
-  try {
-    final res = await api.getWasteCategories();
-    if (res.statusCode == 200) {
-      final list = (res.data is List) ? res.data : res.data['results'] ?? [];
-      return (list as List).map((c) => WasteCategory.fromJson(c)).toList();
-    }
-  } catch (_) {}
-  return [];
+  final res = await api.getWasteCategories();
+  final list = (res.data is List) ? res.data : res.data['results'] ?? [];
+  return (list as List).map((c) => WasteCategory.fromJson(c)).toList();
 });
 
 class WasteRequestsNotifier extends StateNotifier<AsyncValue<List<WasteRequest>>> {
@@ -38,25 +33,17 @@ class WasteRequestsNotifier extends StateNotifier<AsyncValue<List<WasteRequest>>
   }
 
   Future<bool> createRequest(Map<String, dynamic> data) async {
-    try {
-      final res = await _api.createWasteRequest(data);
-      if (res.statusCode == 201 || res.statusCode == 200) {
-        await fetchRequests();
-        return true;
-      }
-    } catch (_) {}
-    return false;
+    final res = await _api.createWasteRequest(data);
+    if (res.statusCode != 201 && res.statusCode != 200) return false;
+    await fetchRequests();
+    return true;
   }
 
   Future<bool> cancelRequest(String id, String reason) async {
-    try {
-      final res = await _api.cancelRequest(id, reason);
-      if (res.statusCode == 200) {
-        await fetchRequests();
-        return true;
-      }
-    } catch (_) {}
-    return false;
+    final res = await _api.cancelRequest(id, reason);
+    if (res.statusCode != 200) return false;
+    await fetchRequests();
+    return true;
   }
 }
 

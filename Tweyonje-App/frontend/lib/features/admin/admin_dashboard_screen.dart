@@ -411,6 +411,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Widget _buildQuickStats(AdminDashboardData data) {
+    final revenue = data.financials.totalRevenueUgx;
+    final revenueLabel = revenue >= 1000000
+        ? '${(revenue / 1000000).toStringAsFixed(1)}M'
+        : revenue.toStringAsFixed(0);
     return GridView.count(
       crossAxisCount: 4,
       shrinkWrap: true,
@@ -418,33 +422,33 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       mainAxisSpacing: AppSpacing.md,
       crossAxisSpacing: AppSpacing.md,
       childAspectRatio: 1.5,
-      children: const [
+      children: [
         _StatCard(
           icon: Icons.people,
           label: 'Total Users',
-          value: '0',
-          change: '+0 this week',
+          value: '${data.users.total}',
+          change: '+${data.users.newThisWeek} this week',
           color: AppColors.primary,
         ),
         _StatCard(
           icon: Icons.delete_outline,
           label: 'Waste Requests',
-          value: '0',
-          change: '0 pending',
+          value: '${data.wasteRequests.total}',
+          change: '${data.wasteRequests.pending} pending',
           color: AppColors.info,
         ),
         _StatCard(
           icon: Icons.verified_user,
           label: 'Verifications',
-          value: '0',
+          value: '${data.verifications.pending}',
           change: 'pending approval',
           color: AppColors.warning,
         ),
         _StatCard(
           icon: Icons.attach_money,
           label: 'Revenue',
-          value: '0',
-          change: 'UGX',
+          value: revenueLabel,
+          change: data.financials.currency,
           color: AppColors.success,
         ),
       ],
@@ -452,49 +456,81 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Widget _buildUsersSection(AdminDashboardData data) {
+    final byRole = data.users.byRole;
+    final entries = [
+      ('Residents', byRole['residents'] ?? 0),
+      ('Collectors', byRole['collectors'] ?? 0),
+      ('Authorities', byRole['authorities'] ?? 0),
+      ('Recyclers', byRole['recyclers'] ?? 0),
+      ('Businesses', byRole['businesses'] ?? 0),
+      ('Admins', byRole['admins'] ?? 0),
+    ];
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SectionHeader(
+          const SectionHeader(
             title: 'Users by Role',
             subtitle: 'Distribution across platform',
           ),
           const SizedBox(height: AppSpacing.lg),
+          ...entries.map(
+            (e) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      e.$1,
+                      style: AppTypography.bodySmall,
+                    ),
+                  ),
+                  Text(
+                    '${e.$2}',
+                    style: AppTypography.label
+                        .copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildActivitySection(AdminDashboardData data) {
+    final users = data.users.newThisWeek;
+    final requests = data.wasteRequests.newThisWeek;
+    final reports = data.reports.newThisWeek;
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SectionHeader(
+          const SectionHeader(
             title: 'Recent Activity',
             subtitle: 'Latest platform events',
           ),
           const SizedBox(height: AppSpacing.lg),
-          const _ActivityItem(
+          _ActivityItem(
             icon: Icons.person_add,
-            title: '0 new users',
+            title: '$users new users',
             subtitle: 'Joined this week',
             color: AppColors.success,
           ),
           const SizedBox(height: AppSpacing.md),
-          const _ActivityItem(
+          _ActivityItem(
             icon: Icons.delete,
-            title: '0 new requests',
+            title: '$requests new requests',
             subtitle: 'Created this week',
             color: AppColors.info,
           ),
           const SizedBox(height: AppSpacing.md),
-          const _ActivityItem(
+          _ActivityItem(
             icon: Icons.report,
-            title: '0 new reports',
+            title: '$reports new reports',
             subtitle: 'Submitted this week',
             color: AppColors.warning,
           ),
@@ -504,50 +540,53 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Widget _buildWasteRequestsSection(AdminDashboardData data) {
+    final weight = data.wasteRequests.totalWeightKg;
+    final weightLabel =
+        weight >= 1000 ? '${(weight / 1000).toStringAsFixed(1)}t' : '${weight.toStringAsFixed(0)}kg';
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SectionHeader(
+          const SectionHeader(
             title: 'Waste Collection Overview',
             subtitle: 'Request status and volume',
           ),
           const SizedBox(height: AppSpacing.lg),
           Row(
-            children: const [
+            children: [
               Expanded(
                 child: _MetricTile(
                   icon: Icons.pending,
                   label: 'Pending',
-                  value: '0',
+                  value: '${data.wasteRequests.pending}',
                   color: AppColors.warning,
                 ),
               ),
-              SizedBox(width: AppSpacing.md),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: _MetricTile(
                   icon: Icons.local_shipping,
                   label: 'In Progress',
-                  value: '0',
+                  value: '${data.wasteRequests.inProgress}',
                   color: AppColors.info,
                 ),
               ),
-              SizedBox(width: AppSpacing.md),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: _MetricTile(
                   icon: Icons.check_circle,
                   label: 'Completed',
-                  value: '0',
+                  value: '${data.wasteRequests.completed}',
                   color: AppColors.success,
                 ),
               ),
-              SizedBox(width: AppSpacing.md),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: _MetricTile(
                   icon: Icons.scale,
                   label: 'Total Weight',
-                  value: '0t',
+                  value: weightLabel,
                   color: AppColors.primary,
                 ),
               ),
@@ -559,41 +598,44 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Widget _buildFinancialSection(AdminDashboardData data) {
+    String fmt(double v) => v >= 1000000
+        ? '${(v / 1000000).toStringAsFixed(1)}M'
+        : v.toStringAsFixed(0);
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SectionHeader(
+          const SectionHeader(
             title: 'Financial Overview',
             subtitle: 'Revenue and payouts',
           ),
           const SizedBox(height: AppSpacing.lg),
           Row(
-            children: const [
+            children: [
               Expanded(
                 child: _MetricTile(
                   icon: Icons.trending_up,
                   label: 'Total Revenue',
-                  value: '0',
+                  value: fmt(data.financials.totalRevenueUgx),
                   color: AppColors.success,
                 ),
               ),
-              SizedBox(width: AppSpacing.md),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: _MetricTile(
                   icon: Icons.payments,
                   label: 'Total Payouts',
-                  value: '0',
+                  value: fmt(data.financials.totalPayoutsUgx),
                   color: AppColors.danger,
                 ),
               ),
-              SizedBox(width: AppSpacing.md),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: _MetricTile(
                   icon: Icons.account_balance_wallet,
                   label: 'Net Margin',
-                  value: '0',
+                  value: fmt(data.financials.netMarginUgx),
                   color: AppColors.primary,
                 ),
               ),
@@ -605,7 +647,29 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Widget _buildVerificationsAlert(AdminDashboardData data) {
-    return const SizedBox.shrink();
+    final pending = data.verifications.pending;
+    if (pending <= 0) return const SizedBox.shrink();
+    return AppCard(
+      color: AppColors.warningSoft,
+      border: Border.all(color: AppColors.warning.withAlpha(77)),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber, color: AppColors.warning),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              '$pending collector verifications are pending approval.',
+              style: AppTypography.label.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+          AppButton(
+            text: 'Review',
+            onPressed: () => context.push('/admin/verifications'),
+            variant: ButtonVariant.outline,
+          ),
+        ],
+      ),
+    );
   }
 
   void _handleLogout() {

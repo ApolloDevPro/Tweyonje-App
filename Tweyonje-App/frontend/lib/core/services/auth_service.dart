@@ -276,34 +276,6 @@ class AuthService {
     }
   }
 
-  Future<bool> changePassword({
-    required String oldPassword,
-    required String newPassword,
-  }) async {
-    try {
-      Logger.info('Attempting to change password');
-
-      final response = await _apiClient.post(
-        ApiEndpoints.changePassword,
-        data: {
-          'old_password': oldPassword,
-          'new_password': newPassword,
-        },
-      );
-
-      if (response.statusCode == 200) {
-        Logger.info('Password change successful');
-        return true;
-      } else {
-        Logger.warning('Password change failed with status: ${response.statusCode}');
-        return false;
-      }
-    } catch (e) {
-      Logger.error('Password change failed', error: e);
-      return false;
-    }
-  }
-
   Future<bool> requestPasswordReset({required String email}) async {
     try {
       Logger.info('Attempting to request password reset for: $email');

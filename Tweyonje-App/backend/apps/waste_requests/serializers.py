@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.accounts.serializers import UserSerializer
@@ -70,12 +71,18 @@ class WasteRequestSerializer(serializers.ModelSerializer):
             "reference_id",
             "user",
             "status",
+            "estimated_price",
             "payment_status",
             "paid_amount",
             "eco_points_awarded",
             "created_at",
             "updated_at",
         )
+
+    def validate_scheduled_date(self, value):
+        if value and value < timezone.localdate():
+            raise serializers.ValidationError("Pickup date cannot be in the past.")
+        return value
 
 
 class RecurringScheduleSerializer(serializers.ModelSerializer):

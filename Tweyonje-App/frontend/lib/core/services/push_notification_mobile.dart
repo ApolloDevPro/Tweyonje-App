@@ -2,7 +2,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/service_controllers.dart';
-import '../constants/api_endpoints.dart';
 import '../storage/storage_service.dart';
 import 'api_client.dart';
 import 'logger.dart';
@@ -10,10 +9,7 @@ import 'logger.dart';
 /// Publishes a typed [AppEventType] on [appEventBusProvider] so connected
 /// screens refresh the moment an FCM message arrives. Falls back to nothing on
 /// web, where pure-web push is handled by the service worker.
-void _publish(
-  Ref ref,
-  RemoteMessage message,
-) {
+void _publish(Ref ref, RemoteMessage message) {
   final data = message.data;
   final type = data['type'] ?? 'general';
   final event = switch (type) {
@@ -23,7 +19,9 @@ void _publish(
     'reward_update' => AppEventType.requestUpdated,
     _ => AppEventType.notificationAdded,
   };
-  ref.read(appEventBusProvider).publish(
+  ref
+      .read(appEventBusProvider)
+      .publish(
         event,
         id: data['request_id'] ?? data['id'],
         message: message.notification?.body,
@@ -114,10 +112,7 @@ class PushNotificationService {
 
   Future<void> _sendTokenToBackend(String token) async {
     try {
-      await _apiClient.post(
-        ApiEndpoints.registerDevice,
-        data: {'token': token, 'device_type': 'mobile'},
-      );
+      await _apiClient.registerDevice(token);
       Logger.info('FCM token registered with backend');
     } catch (e) {
       Logger.error('Failed to send FCM token to backend', error: e);
@@ -125,7 +120,7 @@ class PushNotificationService {
   }
 
   Future<void> _onTokenRefresh(String newToken) async {
-    Logger.info('FCM token refreshed: $newToken');
+    Logger.info('FCM token refreshed');
 
     // Save new token locally
     await _storageService.saveFCMToken(newToken);
