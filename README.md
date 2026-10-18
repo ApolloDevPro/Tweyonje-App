@@ -1,15 +1,8 @@
-==============================================================
+
 TWEYONJE - SMART WASTE MANAGEMENT SYSTEM
 Together for a Cleaner Uganda
-==============================================================
 
-License: MIT | Flutter 3.44 | Dart 3.12 | Django REST
-
-
---------------------------------------------------------------
 1. OVERVIEW
---------------------------------------------------------------
-
 Tweyonje is a mobile-based smart waste management platform that
 connects Residents, Collectors, Authorities, and Recyclers for
 efficient waste collection and recycling in Uganda. Using mobile
@@ -32,10 +25,7 @@ KEY FEATURES
   * English Interface - Clean, consistent English-only UI
   * Smart Notifications - Real-time alerts and status updates
 
-
---------------------------------------------------------------
 2. TECHNOLOGY STACK
---------------------------------------------------------------
 
 Mobile Frontend   Flutter + Dart
                   Cross-platform app (Android & iOS)
@@ -63,68 +53,8 @@ Offline Support   SharedPreferences + Hive
                   Local storage and offline-first architecture
 Deployment        Docker + Nginx + GitHub Actions
                   Containerized deployment with CI/CD
-
-
---------------------------------------------------------------
-3. PROJECT STRUCTURE
---------------------------------------------------------------
-
-tweyonje-app/
-|-- backend/                    Django REST API backend
-|   |-- apps/                   Business modules (bounded contexts)
-|   |   |-- accounts/           Registration, authentication, roles
-|   |   |-- profiles/           User profiles, vehicles, sites
-|   |   |-- waste_requests/     Waste collection requests
-|   |   |-- collections/        Job assignment, lifecycle, shifts
-|   |   |-- tracking/           GPS tracking, location sharing
-|   |   |-- reports/            Illegal dumping reports
-|   |   |-- notifications/      Push, SMS, email notifications
-|   |   |-- payments/           Payment processing, payouts
-|   |   |-- recycling/          Recycling marketplace
-|   |   |-- rewards/            Eco-points, tiers, redemption
-|   |   |-- ratings/            User ratings, incident reports
-|   |   |-- platform_admin/     User management, verification
-|   |   |-- analytics/          Dashboards, reports, insights
-|   |   |-- routing/            Route optimization
-|   |   |-- ai/                 Waste classification AI
-|   |   |-- support/            Support tickets, disputes
-|   |   |-- security/           Audit logs, rate limiting
-|   |   `-- localization/       Translations, i18n (English)
-|   |-- core/                   Shared models, permissions, middleware
-|   |-- config/                 Django settings, URLs, WSGI/ASGI
-|   |-- api/                    API v1 endpoint registration
-|   |-- tests/                  Unit and integration tests
-|   `-- docs/                   Backend documentation
-|
-|-- frontend/                   Flutter mobile application
-|   `-- lib/
-|       |-- core/               Core functionality
-|       |   |-- constants/      App constants and configurations
-|       |   |-- network/        Network configuration and utilities
-|       |   |-- services/       Core services (biometric, location)
-|       |   |-- storage/        Local storage implementations
-|       |   `-- theme/          App theme and styling
-|       |-- features/           Feature modules
-|       |   |-- auth/           Authentication screens and logic
-|       |   |-- resident/       Resident-specific screens
-|       |   |-- collector/      Collector-specific screens
-|       |   |-- authority/      Authority-specific screens
-|       |   |-- profile/        User profile management
-|       |   `-- recycling/      Recycling marketplace
-|       |-- models/             Data models and DTOs
-|       |-- providers/          Riverpod state providers
-|       |-- routing/            Navigation and routing
-|       |-- widgets/            Reusable UI widgets
-|       `-- main.dart           App entry point
-|
-`-- .github/workflows/          CI/CD pipelines
-    |-- backend.yml             Backend deployment
-    `-- frontend.yml            Frontend deployment
-
-
---------------------------------------------------------------
+                  
 4. DEVELOPMENT ROADMAP
---------------------------------------------------------------
 
 The project is organized into 6 sprints covering 125 user stories:
 
@@ -136,9 +66,7 @@ The project is organized into 6 sprints covering 125 user stories:
   Sprint 6 - Operations & Support ....... 15 stories
 
 
---------------------------------------------------------------
 5. GETTING STARTED
---------------------------------------------------------------
 
 PREREQUISITES
 
@@ -290,10 +218,7 @@ assets/app_icon/app_icon.png:
   dart run flutter_launcher_icons
 
 
---------------------------------------------------------------
 6. CONFIGURATION
---------------------------------------------------------------
-
 BACKEND ENVIRONMENT VARIABLES (.env)
 
   # Database
@@ -337,10 +262,7 @@ at build/run time via --dart-define (see frontend/.env.example):
   WS_URL=ws://127.0.0.1:8000/ws/
   # GOOGLE_MAPS_API_KEY=   (only needed for Google Maps)
 
-
---------------------------------------------------------------
 7. CI/CD PIPELINE
---------------------------------------------------------------
 
 GitHub Actions handles automated testing and deployment.
 
@@ -363,10 +285,7 @@ FRONTEND PIPELINE (.github/workflows/frontend.yml)
 
 See backend/docs/CI_CD_SETUP.md for detailed CI/CD configuration.
 
-
---------------------------------------------------------------
 8. MANAGEMENT COMMANDS
---------------------------------------------------------------
 
   python manage.py run_payouts                 Batch payouts for a period
   python manage.py run_reconciliation          Reconcile provider statements
@@ -378,10 +297,7 @@ See backend/docs/CI_CD_SETUP.md for detailed CI/CD configuration.
   python manage.py train_waste_classifier --data-dir path/to/images
                                                Train AI model
 
-
---------------------------------------------------------------
 9. BACKEND HIGHLIGHTS
---------------------------------------------------------------
 
   * Role-Based Access Control - Residents, collectors,
     authorities, and admins see only their relevant data
@@ -399,11 +315,7 @@ See backend/docs/CI_CD_SETUP.md for detailed CI/CD configuration.
   * Rate Limiting - Configurable throttling for sensitive
     endpoints
 
-
---------------------------------------------------------------
 10. FRONTEND FEATURES
---------------------------------------------------------------
-
 COMPONENT LIBRARY
 
   * Core UI: Screen, Card, Button, Input, Icon, Avatar, Badge,
@@ -442,38 +354,4 @@ CROSS-PLATFORM
   * Responsive design for different screen sizes
 
 
---------------------------------------------------------------
-11. CONTRIBUTING
---------------------------------------------------------------
 
-Contributions are welcome. Please:
-
-  1. Fork the repository and create a feature branch.
-  2. Follow the coding standards (Black for Python,
-     Flutter/Dart conventions).
-  3. Write tests for new features and bug fixes.
-  4. Update documentation as needed.
-  5. Submit a pull request with a clear description.
-
-
---------------------------------------------------------------
-12. LICENSE
---------------------------------------------------------------
-
-This project is licensed under the MIT License. See the LICENSE
-file for details.
-
-
---------------------------------------------------------------
-13. SUPPORT
---------------------------------------------------------------
-
-  Email:          support@tweyonje.ug
-  Issues:         https://github.com/your-org/tweyonje/issues
-  Documentation:  https://docs.tweyonje.ug
-
-
-==============================================================
-Built for a Cleaner Uganda
-(c) 2024 Tweyonje. All rights reserved.
-==============================================================
